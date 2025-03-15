@@ -54,7 +54,7 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(member.display_name)  # ใช้ชื่อธรรมดาใน log
+                    mentions.append(f"<{member.display_name}>")  # ใช้ <mention> แทน @ ใน log
                 else:
                     remaining_words.append(word)
             else:
