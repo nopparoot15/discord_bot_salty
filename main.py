@@ -36,7 +36,7 @@ async def on_message(message):
         return
     
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
-        content = message.content.replace('@', '＠')  # เปลี่ยน @ เป็นอักขระที่คล้ายกันเพื่อป้องกันแจ้งเตือน
+        content = message.content.replace('@', '＠')  # ป้องกันการ mention จริง
         mentions = []
         remaining_words = []
 
@@ -45,7 +45,7 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.find(lambda m: m.name == username or m.display_name == username, message.guild.members)
                 if member:
-                    mentions.append(member.mention)  # คืนค่า mention จริงเมื่อส่งไปที่ ANNOUNCE_CHANNEL_ID
+                    mentions.append(member.mention)  # ใช้ mention จริงใน ANNOUNCE_CHANNEL_ID
                 else:
                     remaining_words.append(word)
             else:
@@ -59,7 +59,7 @@ async def on_message(message):
 
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            await announce_channel.send(final_message)
+            await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
             await message.delete()
             await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}): {final_message}")
         except discord.errors.NotFound:
@@ -91,12 +91,7 @@ async def setup(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
 
-    await interaction.channel.send(embed=embed)
-    try:
-        await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
-    except discord.errors.InteractionResponded:
-        print("⚠️ Interaction ซ้ำซ้อน แต่ไม่มีผลกระทบ")
-    
+    await interaction.response.send_message(embed=embed)
     await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name} โดย {interaction.user} ({interaction.user.id})")
 
 bot.run(TOKEN)
