@@ -5,7 +5,7 @@ from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 123456789012345678  # ID ห้องรับข้อความ
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -17,13 +17,13 @@ server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหร�
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
+    await bot.tree.sync()  # ซิงค์คำสั่ง Slash Commands
 
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
     
-    # เฉพาะข้อความนิรนามที่ใช้ได้แค่ใน MESSAGE_INPUT_CHANNEL_ID
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
         content = message.content
         mentions = []
@@ -32,7 +32,7 @@ async def on_message(message):
         for word in content.split():
             if word.startswith('@'):
                 username = word[1:]
-                member = discord.utils.get(message.guild.members, name=username)
+                member = discord.utils.find(lambda m: m.name == username or m.display_name == username, message.guild.members)
                 if member:
                     mentions.append(member.mention)
                 else:
@@ -46,12 +46,15 @@ async def on_message(message):
         if mentions:
             final_message = f"{mention_text}\n{final_message}"
 
-        announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
-        if announce_channel:
+        try:
+            announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             await announce_channel.send(final_message)
             await message.delete()
-    
-    # อนุญาตให้ทุกคำสั่งทำงานได้ในทุกห้อง
+        except discord.errors.NotFound:
+            print("❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID")
+        except discord.errors.Forbidden:
+            print("❌ บอทไม่มีสิทธิ์ส่งข้อความไปยังช่องประกาศ")
+
     await bot.process_commands(message)
 
 @bot.command()
@@ -64,11 +67,13 @@ async def setup(interaction: discord.Interaction):
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
         return
 
-    embed = discord.Embed(title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-                          description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
-                          color=discord.Color.blue())
+    embed = discord.Embed(
+        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
+        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+        color=discord.Color.blue()
+    )
 
     await interaction.channel.send(embed=embed)
     await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
 
-bot.run(os.getenv('TOKEN'))
+bot.run(TOKEN)
