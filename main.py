@@ -92,7 +92,11 @@ async def setup(interaction: discord.Interaction):
     )
 
     await interaction.channel.send(embed=embed)
-    await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
+    try:
+        await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
+    except discord.errors.InteractionResponded:
+        print("⚠️ Interaction ซ้ำซ้อน แต่ไม่มีผลกระทบ")
+    
     await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name} โดย {interaction.user} ({interaction.user.id})")
 
 bot.run(TOKEN)
