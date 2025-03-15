@@ -5,7 +5,6 @@ from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197  # ห้องที่บอทจะส่งข้อความไป
-MESSAGE_PROMPT_CHANNEL_ID = 1350161594985746567  # ห้องที่ส่ง Embed พร้อมปุ่ม
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -21,8 +20,7 @@ class RecipientSelectView(discord.ui.View):
         self.message_content = message_content
         self.members = members
         self.page = page
-        self.page_size = 25  # จำกัดหน้าไม่เกิน 25 คน
-
+        self.page_size = 25  # จำกัดไม่เกิน 25 คนต่อหน้า
         self.update_select_menu()
 
     def update_select_menu(self):
@@ -68,7 +66,7 @@ class PreviousPageButton(discord.ui.Button):
     """ปุ่มย้อนกลับ"""
     def __init__(self, view):
         super().__init__(label="◀️", style=discord.ButtonStyle.secondary)
-        self.view_ref = view  # ใช้ ref เก็บ view ไว้
+        self.view_ref = view
 
     async def callback(self, interaction: discord.Interaction):
         self.view_ref.page -= 1
@@ -79,7 +77,7 @@ class NextPageButton(discord.ui.Button):
     """ปุ่มไปหน้าถัดไป"""
     def __init__(self, view):
         super().__init__(label="▶️", style=discord.ButtonStyle.secondary)
-        self.view_ref = view  # ใช้ ref เก็บ view ไว้
+        self.view_ref = view
 
     async def callback(self, interaction: discord.Interaction):
         self.view_ref.page += 1
@@ -108,14 +106,24 @@ async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await bot.tree.sync()
 
-    # ส่ง Embed พร้อมปุ่มกด
-    message_channel = await bot.fetch_channel(MESSAGE_PROMPT_CHANNEL_ID)
-    if message_channel:
-        embed = discord.Embed(
-            title="📩 ฝากข้อความนิรนาม",
-            description="กดปุ่มด้านล่างเพื่อส่งข้อความแบบไม่ระบุตัวตน!",
-            color=discord.Color.blue()
-        )
-        await message_channel.send(embed=embed, view=MessageButtonView())
+@bot.command()
+async def ping(ctx):
+    """เช็คสถานะบอท"""
+    await ctx.send("🏓 Pong! บอทยังออนไลน์อยู่!")
+
+@bot.tree.command(name="setup", description="ตั้งค่าการส่งข้อความนิรนาม")
+async def setup(interaction: discord.Interaction):
+    """ให้แอดมินพิมพ์ /setup เพื่อสร้างปุ่มใช้งานบอท"""
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
+        return
+
+    embed = discord.Embed(
+        title="📩 ฝากข้อความนิรนาม",
+        description="กดปุ่มด้านล่างเพื่อส่งข้อความแบบไม่ระบุตัวตน!",
+        color=discord.Color.blue()
+    )
+    await interaction.channel.send(embed=embed, view=MessageButtonView())
+    await interaction.response.send_message("✅ ปุ่มถูกสร้างเรียบร้อยแล้ว!", ephemeral=True)
 
 bot.run(TOKEN)
