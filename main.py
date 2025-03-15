@@ -43,7 +43,7 @@ async def on_ready():
 async def on_message(message):
     if message.author.bot:
         return
-    
+
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
         content = message.content
         mentions = []
@@ -54,8 +54,10 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(member.mention)  # แปลงเป็น mention จริงเฉพาะตอนส่งไปที่ ANNOUNCE_CHANNEL_ID
+                    mentions.append(member.mention)
                 else:
+                    remaining_words.append(word)
+            else:
                 remaining_words.append(word)
 
         mention_text = " ".join(mentions)
@@ -67,21 +69,24 @@ async def on_message(message):
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             
-
-            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and time.time() - getattr(bot, 'last_message_time', 0) > 2):
+            # Check if the message is new or sufficiently different from the last sent one
+            current_time = time.time()
+            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
-                bot.last_message_time = time.time()  # ป้องกันการส่งข้อความซ้ำ
-                
+                bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
+
+            # Log if the message is not the same as last log message
+            if not getattr(bot, 'last_log_message', None) or bot.last_log_message != final_message:
+                bot.last_log_message = final_message
+                await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
+            
+            # Delete the original message
             try:
                 await message.delete()
             except discord.errors.Forbidden:
                 print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
-            if not getattr(bot, 'last_log_message', None) or bot.last_log_message != final_message:
-                bot.last_log_message = final_message
-                await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
-                return
-            return  # ป้องกันบอท process command โดยไม่จำเป็น
+
         except (discord.errors.NotFound, discord.errors.Forbidden) as e:
             error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
             print(error_msg)
