@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 TOKEN = os.getenv("TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197  # ห้องที่บอทจะส่งข้อความไป
 LOG_CHANNEL_ID = 1350380441504448512  # ห้อง logs ที่ใช้บันทึกข้อมูล
-GUILD_ID = 123456789012345678  # ใส่ ID ของเซิร์ฟเวอร์ที่ต้องการให้บอททำงาน
+GUILD_ID = 1321268883025559683  # ใส่ ID ของเซิร์ฟเวอร์ที่ต้องการให้บอททำงาน
 
 intents = discord.Intents.default()
 intents.message_content = True
