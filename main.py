@@ -3,16 +3,16 @@ from discord.ext import commands
 import os
 from myserver import server_on
 
-TOKEN = os.getenv("DISCORD_TOKEN")  # ใส่ token ใน Environment (แนะนำ)
+TOKEN = os.getenv("DISCORD_TOKEN")  # token จาก Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 123456789012345678  # ID ห้องที่ให้ผู้ใช้พิมพ์ข้อความที่นี่
+MESSAGE_INPUT_CHANNEL_ID = 1234567890123456789  # เปลี่ยนเป็น ID ห้องที่ใช้รับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
+server_on()  # สำหรับให้บอทออนไลน์บน Render
 
 @bot.event
 async def on_ready():
@@ -25,7 +25,6 @@ async def on_message(message):
 
     content = message.content
     mentions = []
-
     words = content.split()
     remaining_words = []
 
@@ -51,15 +50,10 @@ async def on_message(message):
         await announce_channel.send(final_message)
         await message.delete()
 
-    await bot.process_commands(message)  # เรียก process_commands เพื่อให้บอททำงานคำสั่งด้วย
-
-
-@bot.event
-async def on_ready():
-    print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
+    await bot.process_commands(message)  # เพิ่มตรงนี้เพื่อให้คำสั่งทำงาน
 
 @bot.command()
 async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
 
-bot.run(TOKEN)
+bot.run(os.getenv('DISCORD_TOKEN'))
