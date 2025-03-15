@@ -1,9 +1,12 @@
-import discord
-from discord.ext import commands
 import os
 import sys
 import time
-from myserver import server_on
+import asyncio  # ✅ จัดให้อยู่กับ standard library
+
+import discord
+from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
+
+from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์
 
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
@@ -17,6 +20,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def log_message(content):
     asyncio.create_task(_send_log(content))  # ทำให้ log ทำงานแบบ async
+
+async def _send_log(content):
     try:
         log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
         await log_channel.send(content)
@@ -27,11 +32,11 @@ async def log_message(content):
 
 @bot.event
 async def on_ready():
-    print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
-    if not hasattr(bot, 'synced'):
+    if not hasattr(bot, 'synced') or not getattr(bot, 'synced', False):
         await bot.tree.sync()
         bot.synced = True  # ป้องกันการ Sync ซ้ำ
-    await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
+        print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
+        await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
 @bot.event
 async def on_message(message):
@@ -62,14 +67,17 @@ async def on_message(message):
 
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            import time
+            
 
             if not hasattr(bot, 'last_message_content') or bot.last_message_content != final_message or time.time() - getattr(bot, 'last_message_time', 0) > 2:
                 bot.last_message_content = final_message
                 bot.last_message_time = time.time()
                 
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
-            await message.delete()
+            try:
+    await message.delete()
+except discord.errors.Forbidden:
+    print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
             if not hasattr(bot, 'last_log_message') or bot.last_log_message != final_message:
                 bot.last_log_message = final_message
                 await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
