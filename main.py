@@ -27,6 +27,8 @@ class RecipientSelectView(discord.ui.View):
 
     def update_select_menu(self):
         """อัปเดต Select Menu ตามหน้าปัจจุบัน"""
+        self.clear_items()  # ลบปุ่มก่อนหน้า
+
         start = self.page * self.page_size
         end = start + self.page_size
         paged_members = self.members[start:end]
@@ -36,7 +38,6 @@ class RecipientSelectView(discord.ui.View):
             for member in paged_members
         ]
 
-        self.clear_items()  # ลบปุ่มก่อนหน้า
         if options:
             select_menu = discord.ui.Select(
                 placeholder=f"เลือกผู้รับ... (หน้า {self.page + 1}/{(len(self.members) - 1) // self.page_size + 1})",
@@ -67,23 +68,23 @@ class PreviousPageButton(discord.ui.Button):
     """ปุ่มย้อนกลับ"""
     def __init__(self, view):
         super().__init__(label="◀️", style=discord.ButtonStyle.secondary)
-        self.view = view
+        self.view_ref = view  # ใช้ ref เก็บ view ไว้
 
     async def callback(self, interaction: discord.Interaction):
-        self.view.page -= 1
-        self.view.update_select_menu()
-        await interaction.response.edit_message(view=self.view)
+        self.view_ref.page -= 1
+        self.view_ref.update_select_menu()
+        await interaction.response.edit_message(view=self.view_ref)
 
 class NextPageButton(discord.ui.Button):
     """ปุ่มไปหน้าถัดไป"""
     def __init__(self, view):
         super().__init__(label="▶️", style=discord.ButtonStyle.secondary)
-        self.view = view
+        self.view_ref = view  # ใช้ ref เก็บ view ไว้
 
     async def callback(self, interaction: discord.Interaction):
-        self.view.page += 1
-        self.view.update_select_menu()
-        await interaction.response.edit_message(view=self.view)
+        self.view_ref.page += 1
+        self.view_ref.update_select_menu()
+        await interaction.response.edit_message(view=self.view_ref)
 
 class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความถึงใครบางคน"):
     """Modal ให้ผู้ใช้พิมพ์ข้อความ"""
