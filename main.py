@@ -51,6 +51,9 @@ async def on_message(message):
         await announce_channel.send(final_message)
         await message.delete()
 
+    await bot.process_commands(message)  # เรียก process_commands เพื่อให้บอททำงานคำสั่งด้วย
+
+
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
