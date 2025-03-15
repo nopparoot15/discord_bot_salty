@@ -3,9 +3,9 @@ from discord.ext import commands
 import os
 from myserver import server_on
 
-TOKEN = os.getenv("TOKEN")  # token จาก Environment
+TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 123456789012345678  # ใส่ ID ห้องรับข้อความ
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -25,10 +25,9 @@ async def on_message(message):
 
     content = message.content
     mentions = []
-    words = content.split()
     remaining_words = []
 
-    for word in words:
+    for word in content.split():
         if word.startswith('@'):
             username = word[1:]
             member = discord.utils.get(message.guild.members, name=username)
@@ -58,17 +57,19 @@ async def on_ready():
 
 @bot.command()
 async def ping(ctx):
-    await ctx.send('Pong! 🏓')
+    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
 
-@bot.tree.command(name="setup", description="สร้างกล่องข้อความแนะนำวิธีใช้")
-@commands.has_permissions(administrator=True)
+@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
-        color=discord.Color.blue()
-    )
-    await interaction.channel.send(embed=embed)
-    await interaction.response.send_message("✅ สร้างกล่องข้อความเรียบร้อยแล้ว", ephemeral=True)
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
+        return
 
-bot.run(os.getenv("TOKEN"))
+    embed = discord.Embed(title="📩 ส่งข้อความนิรนาม",
+                          description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความนิรนาม\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+                          color=discord.Color.blue())
+
+    await interaction.channel.send(embed=embed)
+    await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
+
+bot.run(os.getenv('TOKEN'))
