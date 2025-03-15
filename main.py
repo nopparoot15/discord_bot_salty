@@ -3,9 +3,9 @@ from discord.ext import commands
 import os
 from myserver import server_on
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("DISCORD_TOKEN")  # ใส่ token ใน Environment (แนะนำ)
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
+MESSAGE_INPUT_CHANNEL_ID = 123456789012345678  # ID ห้องที่ให้ผู้ใช้พิมพ์ข้อความที่นี่
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -17,7 +17,7 @@ server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหร�
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
-    
+
 @bot.event
 async def on_message(message):
     if message.author.bot or message.channel.id != MESSAGE_INPUT_CHANNEL_ID:
@@ -51,4 +51,12 @@ async def on_message(message):
         await announce_channel.send(final_message)
         await message.delete()
 
-bot.run(os.getenv('TOKEN'))
+@bot.event
+async def on_ready():
+    print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
+
+bot.run(TOKEN)
