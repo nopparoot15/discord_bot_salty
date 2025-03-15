@@ -2,6 +2,7 @@ from myserver import server_on
 from log_utils import setup_logging, send_log_to_discord
 import os
 import bot_setup
+import event_handlers  # Ensure event handlers are imported to register events
 
 # ตั้งค่า logging
 logger = setup_logging()
