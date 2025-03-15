@@ -1,23 +1,23 @@
-import os
 import discord
 from discord.ext import commands
-from discord import app_commands
-
+import os
 from myserver import server_on
 
-
+TOKEN = os.getenv("DISCORD_TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # 🔹 ตั้งค่า ID ห้องที่ให้ผู้ใช้พิมพ์ข้อความที่นี่
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
+
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
-
+    
 @bot.event
 async def on_message(message):
     if message.author.bot or message.channel.id != MESSAGE_INPUT_CHANNEL_ID:
@@ -50,7 +50,5 @@ async def on_message(message):
     if announce_channel:
         await announce_channel.send(final_message)
         await message.delete()
-
-server_on
 
 bot.run(os.getenv('TOKEN'))
