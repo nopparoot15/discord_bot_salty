@@ -1,11 +1,13 @@
 import discord
 from discord.ext import commands
+
 import os
 from myserver import server_on
 
-TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
-ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
+TOKEN = os.getenv("TOKEN")
+ANNOUNCE_CHANNEL_ID = 1350128705648984197  # ห้องที่บอทจะส่งข้อความไป
+REACTION_EMOJI = "📩"  # อีโมจิที่ต้องกด
+MESSAGE_PROMPT_CHANNEL_ID = 123456789012345678  # ห้องที่ส่ง Embed พร้อมปุ่ม
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -14,66 +16,63 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 
+class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความถึงใครบางคน"):
+    message = discord.ui.TextInput(label="พิมพ์ข้อความที่ต้องการส่ง", style=discord.TextStyle.paragraph, required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()  # ปิด Modal
+        await self.select_recipient(interaction, self.message.value)
+
+    async def select_recipient(self, interaction, message_content):
+        """เปิด Select Menu ให้เลือกผู้รับ"""
+        view = RecipientSelectView(message_content)
+        await interaction.followup.send("📌 กรุณาเลือกผู้รับ:", view=view, ephemeral=True)
+
+class RecipientSelectView(discord.ui.View):
+    def __init__(self, message_content):
+        super().__init__(timeout=60)
+        self.message_content = message_content
+
+    @discord.ui.select(placeholder="เลือกผู้รับ...", min_values=1, max_values=3, options=[])
+    async def select_recipient(self, interaction: discord.Interaction, select: discord.ui.Select):
+        recipients = [interaction.guild.get_member(int(user_id)) for user_id in select.values]
+        mentions = " ".join([user.mention for user in recipients if user])
+        final_message = f"{mentions}\n{self.message_content}"
+
+        announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
+        if announce_channel:
+            await announce_channel.send(final_message)
+            await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=True)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """โหลดสมาชิกของเซิร์ฟเวอร์ลงไปใน Select Menu"""
+        members = [discord.SelectOption(label=member.display_name, value=str(member.id)) for member in interaction.guild.members if not member.bot]
+        self.children[0].options = members
+        return True
+
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
-    await bot.tree.sync()  # ซิงค์คำสั่ง Slash Commands
+    await bot.tree.sync()
+
+    # ส่ง Embed พร้อมปุ่มกดอีโมจิ
+    message_channel = bot.get_channel(MESSAGE_PROMPT_CHANNEL_ID)
+    if message_channel:
+        embed = discord.Embed(
+            title="📩 ฝากข้อความนิรนาม",
+            description=f"กด {REACTION_EMOJI} ด้านล่างเพื่อส่งข้อความแบบไม่ระบุตัวตน!",
+            color=discord.Color.blue()
+        )
+        msg = await message_channel.send(embed=embed)
+        await msg.add_reaction(REACTION_EMOJI)
 
 @bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
-    
-    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
-        content = message.content
-        mentions = []
-        remaining_words = []
-
-        for word in content.split():
-            if word.startswith('@'):
-                username = word[1:]
-                member = discord.utils.find(lambda m: m.name == username or m.display_name == username, message.guild.members)
-                if member:
-                    mentions.append(member.mention)
-                else:
-                    remaining_words.append(word)
-            else:
-                remaining_words.append(word)
-
-        mention_text = " ".join(mentions)
-        final_message = " ".join(remaining_words)
-
-        if mentions:
-            final_message = f"{mention_text}\n{final_message}"
-
-        try:
-            announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            await announce_channel.send(final_message)
-            await message.delete()
-        except discord.errors.NotFound:
-            print("❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID")
-        except discord.errors.Forbidden:
-            print("❌ บอทไม่มีสิทธิ์ส่งข้อความไปยังช่องประกาศ")
-
-    await bot.process_commands(message)
-
-@bot.command()
-async def ping(ctx):
-    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
-
-@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
-async def setup(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
+async def on_reaction_add(reaction, user):
+    """เมื่อมีคนกดอีโมจิ บอทจะเปิด Modal"""
+    if user.bot:
         return
 
-    embed = discord.Embed(
-        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
-        color=discord.Color.blue()
-    )
-
-    await interaction.channel.send(embed=embed)
-    await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
+    if reaction.message.channel.id == MESSAGE_PROMPT_CHANNEL_ID and str(reaction.emoji) == REACTION_EMOJI:
+        await user.send("📩 กรุณาพิมพ์ข้อความของคุณ:", view=MessageModal())
 
 bot.run(TOKEN)
