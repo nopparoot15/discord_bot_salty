@@ -34,6 +34,15 @@ async def log_message(sender: discord.Member, recipients: list, message: str):
     else:
         logging.info(log_text)
 
+class SetupButtonView(discord.ui.View):
+    """ปุ่มเปิด MessageModal สำหรับส่งข้อความนิรนาม"""
+    def __init__(self):
+        super().__init__()
+
+    @discord.ui.button(label="📩 ส่งข้อความนิรนาม", style=discord.ButtonStyle.primary)
+    async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(MessageModal())
+
 class RecipientSelectView(discord.ui.View):
     """เมนูเลือกผู้รับแบบแบ่งหน้า"""
     def __init__(self, message_content, sender, members, page=0):
@@ -119,7 +128,7 @@ async def setup(interaction: discord.Interaction):
         description="กดปุ่มด้านล่างเพื่อส่งข้อความแบบไม่ระบุตัวตน!",
         color=discord.Color.blue()
     )
-    await interaction.channel.send(embed=embed, view=MessageModal())
+    await interaction.channel.send(embed=embed, view=SetupButtonView())
     await interaction.response.send_message("✅ ปุ่มถูกสร้างเรียบร้อยแล้ว!", ephemeral=True)
 
 bot.run(TOKEN)
