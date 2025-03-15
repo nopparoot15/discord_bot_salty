@@ -1,13 +1,12 @@
 import discord
 from discord.ext import commands
-
 import os
 from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197  # ห้องที่บอทจะส่งข้อความไป
 REACTION_EMOJI = "📩"  # อีโมจิที่ต้องกด
-MESSAGE_PROMPT_CHANNEL_ID = 123456789012345678  # ห้องที่ส่ง Embed พร้อมปุ่ม
+MESSAGE_PROMPT_CHANNEL_ID = 1350161594985746567  # ห้องที่ส่ง Embed พร้อมปุ่ม
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -21,12 +20,7 @@ class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความ�
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()  # ปิด Modal
-        await self.select_recipient(interaction, self.message.value)
-
-    async def select_recipient(self, interaction, message_content):
-        """เปิด Select Menu ให้เลือกผู้รับ"""
-        view = RecipientSelectView(message_content)
-        await interaction.followup.send("📌 กรุณาเลือกผู้รับ:", view=view, ephemeral=True)
+        await interaction.followup.send(view=RecipientSelectView(self.message.value), ephemeral=True)
 
 class RecipientSelectView(discord.ui.View):
     def __init__(self, message_content):
@@ -46,7 +40,10 @@ class RecipientSelectView(discord.ui.View):
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """โหลดสมาชิกของเซิร์ฟเวอร์ลงไปใน Select Menu"""
-        members = [discord.SelectOption(label=member.display_name, value=str(member.id)) for member in interaction.guild.members if not member.bot]
+        members = [
+            discord.SelectOption(label=member.display_name, value=str(member.id))
+            for member in interaction.guild.members if not member.bot
+        ]
         self.children[0].options = members
         return True
 
@@ -56,7 +53,7 @@ async def on_ready():
     await bot.tree.sync()
 
     # ส่ง Embed พร้อมปุ่มกดอีโมจิ
-    message_channel = bot.get_channel(MESSAGE_PROMPT_CHANNEL_ID)
+    message_channel = await bot.fetch_channel(MESSAGE_PROMPT_CHANNEL_ID)
     if message_channel:
         embed = discord.Embed(
             title="📩 ฝากข้อความนิรนาม",
@@ -73,6 +70,23 @@ async def on_reaction_add(reaction, user):
         return
 
     if reaction.message.channel.id == MESSAGE_PROMPT_CHANNEL_ID and str(reaction.emoji) == REACTION_EMOJI:
-        await user.send("📩 กรุณาพิมพ์ข้อความของคุณ:", view=MessageModal())
+        channel = await bot.fetch_channel(reaction.message.channel.id)
+        message = await channel.fetch_message(reaction.message.id)
+
+        # เช็คว่า User กดอีโมจิจริง
+        if user in [reactor for react in message.reactions for reactor in await react.users().flatten()]:
+            # สร้าง Interaction ที่จำเป็นในการเปิด Modal
+            class FakeInteraction:
+                def __init__(self, user):
+                    self.user = user
+
+                async def response(self):
+                    return self
+
+                async def send_modal(self, modal):
+                    await user.send("📩 กรุณาพิมพ์ข้อความของคุณ:", view=modal)
+
+            interaction = FakeInteraction(user)
+            await interaction.send_modal(MessageModal())
 
 bot.run(TOKEN)
