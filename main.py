@@ -60,7 +60,7 @@ async def on_message(message):
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
                     mentions.append(f"{member.display_name}")  # ใช้ชื่อผู้ใช้แทน @mention ใน log
-                    remaining_words.append(member.display_name)
+                    remaining_words.append(f"@{member.display_name}")
                 else:
                     remaining_words.append(word)
             else:
@@ -78,8 +78,8 @@ async def on_message(message):
 
             # Log message content without @mentions but with usernames
             log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
-            if mentions:
-                log_entry += f" | Mentions: {', '.join(mentions)}"
+            for mention in mentions:
+                log_entry = log_entry.replace(f"@{mention}", mention)
             await log_message(log_entry)
 
             # Delete the original message
@@ -159,18 +159,25 @@ async def mute_channel(ctx):
         await log_message(f"❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนลที่มี ID {channel_id}")
 
 @bot.command()
-async def delete(ctx, target: discord.Member):
-    """Command to delete messages from a specified user in the current channel."""
-    if not ctx.author.guild_permissions.manage_messages:
+async def delete(ctx, target: discord.Member = None, number: int = 0):
+    """Command to delete messages from a specified user or a specified number of messages in the current channel."""
+    if not ctx.author.guild_permissions.administrator:
         await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
         return
 
-    def is_target_user(m):
-        return m.author == target
+    if target is not None:
+        def is_target_user(m):
+            return m.author == target
 
-    deleted = await ctx.channel.purge(limit=100, check=is_target_user)
-    await ctx.send(f"🗑️ ลบข้อความทั้งหมด {len(deleted)} ข้อความจาก {target.display_name} ({target.id}) เรียบร้อยแล้ว", delete_after=5)
-    await log_message(f"🗑️ {ctx.author} ({ctx.author.id}) ลบข้อความทั้งหมด {len(deleted)} ข้อความจาก {target.display_name} ({target.id}) ในช่อง {ctx.channel.name}")
+        deleted = await ctx.channel.purge(limit=100, check=is_target_user)
+        await ctx.send(f"🗑️ ลบข้อความทั้งหมด {len(deleted)} ข้อความจาก {target.display_name} ({target.id}) เรียบร้อยแล้ว", delete_after=5)
+        await log_message(f"🗑️ {ctx.author} ({ctx.author.id}) ลบข้อความทั้งหมด {len(deleted)} ข้อความจาก {target.display_name} ({target.id}) ในช่อง {ctx.channel.name}")
+    elif number > 0:
+        deleted = await ctx.channel.purge(limit=number)
+        await ctx.send(f"🗑️ ลบข้อความทั้งหมด {len(deleted)} ข้อความเรียบร้อยแล้ว", delete_after=5)
+        await log_message(f"🗑️ {ctx.author} ({ctx.author.id}) ลบข้อความทั้งหมด {len(deleted)} ข้อความในช่อง {ctx.channel.name}")
+    else:
+        await ctx.send("❌ ระบุจำนวนข้อความที่ต้องการลบหรือผู้ใช้ที่ต้องการลบข้อความ")
 
 # Start the server and run the bot
 server_on()
