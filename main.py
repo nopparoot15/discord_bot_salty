@@ -62,30 +62,6 @@ class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความ�
             return
         await interaction.response.send_message("📌 กรุณาเลือกผู้รับ:", view=RecipientSelectView(self.message.value, interaction.user, all_members), ephemeral=True)
 
-class PreviousPageButton(discord.ui.Button):
-    """ปุ่มย้อนกลับ"""
-    def __init__(self, view):
-        super().__init__(label="⬅️ ก่อนหน้า", style=discord.ButtonStyle.secondary)
-        self.view = view
-
-    async def callback(self, interaction: discord.Interaction):
-        if self.view.page > 0:
-            self.view.page -= 1
-            self.view.update_select_menu()
-            await interaction.response.edit_message(view=self.view)
-
-class NextPageButton(discord.ui.Button):
-    """ปุ่มไปหน้าถัดไป"""
-    def __init__(self, view):
-        super().__init__(label="➡️ ถัดไป", style=discord.ButtonStyle.secondary)
-        self.view = view
-
-    async def callback(self, interaction: discord.Interaction):
-        if (self.view.page + 1) * self.view.page_size < len(self.view.members):
-            self.view.page += 1
-            self.view.update_select_menu()
-            await interaction.response.edit_message(view=self.view)
-
 class RecipientSelectView(discord.ui.View):
     """เมนูเลือกผู้รับแบบแบ่งหน้า"""
     def __init__(self, message_content, sender, members, page=0):
@@ -112,12 +88,7 @@ class RecipientSelectView(discord.ui.View):
             )
             select_menu.callback = self.select_recipient_callback
             self.add_item(select_menu)
-        
-        if self.page > 0:
-            self.add_item(PreviousPageButton(self))
-        if end < len(self.members):
-            self.add_item(NextPageButton(self))
-
+    
     async def select_recipient_callback(self, interaction: discord.Interaction):
         recipients = [interaction.guild.get_member(int(user_id)) for user_id in interaction.data["values"]]
         recipients = [user for user in recipients if user]
@@ -126,7 +97,7 @@ class RecipientSelectView(discord.ui.View):
             return
         
         mentions = " ".join([user.mention for user in recipients])
-        final_message = f"{mentions}\\n{self.message_content}"
+        final_message = f"{mentions}\n{self.message_content}"
         announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
         
         if announce_channel:
@@ -153,10 +124,10 @@ async def setup(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
 
-    await interaction.response.defer()  # ป้องกัน Interaction timeout
+    await interaction.response.defer(thinking=True)
     try:
         await interaction.channel.send(embed=embed, view=SetupButtonView())
-        await interaction.followup.send("✅ ปุ่มถูกสร้างเรียบร้อย!", ephemeral=True)  # ป้องกันค้าง "กำลังคิด..."
+        await interaction.followup.send("✅ ปุ่มถูกสร้างเรียบร้อย!", ephemeral=True)
         logging.info("✅ /setup ทำงานสำเร็จแล้ว!")
     except Exception as e:
         logging.error(f"❌ เกิดข้อผิดพลาดใน /setup: {e}")
