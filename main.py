@@ -120,16 +120,11 @@ async def update(ctx):
         await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
         await log_message(f"❌ รีสตาร์ทบอทล้มเหลว: {e}")
 
-@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
-async def setup(interaction: discord.Interaction):
-    # ตรวจสอบว่าข้อความ Embed นี้มีอยู่แล้วหรือไม่
-    async for message in interaction.channel.history(limit=10):  # ตรวจแค่ 10 ข้อความล่าสุด
-        if message.author == bot.user and message.embeds:
-            await interaction.response.send_message("⚠️ ระบบได้ถูกตั้งค่าไว้แล้ว", ephemeral=True)
-            return
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
-        await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
+@bot.command()
+async def setup(ctx):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
+        await log_message(f"⚠️ ผู้ใช้ {ctx.author} ({ctx.author.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
         return
 
     embed = discord.Embed(
@@ -138,8 +133,8 @@ async def setup(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
     view = ConfirmButton()
-    await interaction.channel.send(embed=embed, view=view)
-    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name}")
+    await ctx.send(embed=embed, view=view)
+    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {ctx.channel.name}")
 
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 bot.run(TOKEN)
