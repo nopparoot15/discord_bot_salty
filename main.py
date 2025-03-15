@@ -18,12 +18,12 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP
 
-async def log_message(sender: discord.Member, recipients: list, message: str):
+async def log_message(sender: discord.Member, recipient: discord.Member, message: str):
     """บันทึก log ของการส่งข้อความ"""
     log_channel = bot.get_channel(LOG_CHANNEL_ID)
     log_text = (f"📌 **ข้อความนิรนามถูกส่ง**\n"
                 f"👤 **ผู้ส่ง:** {sender} (ID: {sender.id})\n"
-                f"🎯 **ผู้รับ:** {', '.join([f'{user} (ID: {user.id})' for user in recipients])}\n"
+                f"🎯 **ผู้รับ:** {recipient} (ID: {recipient.id})\n"
                 f"💬 **เนื้อหา:** {message}")
     if log_channel:
         try:
@@ -42,6 +42,26 @@ async def on_ready():
     except Exception as e:
         logging.error(f"❌ ซิงค์คำสั่ง Slash ล้มเหลว: {e}")
 
+class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความ"):
+    recipient = discord.ui.TextInput(label="กรอก ID ผู้รับ", required=True)
+    message = discord.ui.TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        recipient_id = self.recipient.value.strip()
+        message_content = self.message.value
+        
+        recipient = interaction.guild.get_member(int(recipient_id))
+        if not recipient or recipient.bot:
+            await interaction.response.send_message("❌ ไม่พบผู้รับ หรือไม่สามารถส่งหาบอทได้", ephemeral=True)
+            return
+        
+        try:
+            await recipient.send(message_content)
+            await log_message(interaction.user, recipient, message_content)
+            await interaction.response.send_message("✅ ข้อความถูกส่งแล้ว!", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ ไม่สามารถส่งข้อความถึงผู้รับ", ephemeral=True)
+
 class SetupButtonView(discord.ui.View):
     """View สำหรับปุ่มส่งข้อความนิรนาม"""
     def __init__(self):
@@ -50,65 +70,6 @@ class SetupButtonView(discord.ui.View):
     @discord.ui.button(label="📩 ส่งข้อความนิรนาม", style=discord.ButtonStyle.primary)
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(MessageModal())
-
-class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความ"):
-    message = discord.ui.TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        all_members = [m for m in interaction.guild.members if not m.bot]
-        if not all_members:
-            await interaction.response.send_message("❌ ไม่มีสมาชิกในเซิร์ฟเวอร์", ephemeral=True)
-            return
-        await interaction.response.send_message("📌 เลือกผู้รับ:", view=RecipientSelectView(self.message.value, interaction.user, all_members), ephemeral=True)
-
-class RecipientSelectView(discord.ui.View):
-    """View สำหรับเลือกผู้รับ"""
-    def __init__(self, message, sender, members, page=0):
-        super().__init__(timeout=60)
-        self.message = message
-        self.sender = sender
-        self.members = members
-        self.page = page
-        self.page_size = 25
-        self.update_select_menu()
-
-    def update_select_menu(self):
-        self.clear_items()
-        start, end = self.page * self.page_size, (self.page + 1) * self.page_size
-        paged_members = self.members[start:end]
-        options = [discord.SelectOption(label=m.display_name, value=str(m.id)) for m in paged_members]
-        
-        if options:
-            select_menu = discord.ui.Select(
-                placeholder=f"เลือกผู้รับ... (หน้า {self.page + 1})",
-                min_values=1, max_values=min(3, len(options)),
-                options=options
-            )
-            select_menu.callback = self.select_recipient_callback
-            self.add_item(select_menu)
-
-    async def select_recipient_callback(self, interaction: discord.Interaction):
-        recipients = [interaction.guild.get_member(int(user_id)) for user_id in interaction.data["values"]]
-        recipients = [user for user in recipients if user]
-        if not recipients:
-            await interaction.response.send_message("❌ ไม่พบผู้รับ", ephemeral=True)
-            return
-        
-        mentions = " ".join([user.mention for user in recipients])
-        final_message = f"{mentions}\n{self.message}"
-        announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
-        
-        if announce_channel:
-            await announce_channel.send(final_message)
-        else:
-            for user in recipients:
-                try:
-                    await user.send(self.message)
-                except discord.Forbidden:
-                    logging.error(f"ส่งข้อความถึง {user.display_name} ไม่สำเร็จ")
-        
-        await log_message(self.sender, recipients, self.message)
-        await interaction.response.send_message("✅ ข้อความถูกส่งแล้ว!", ephemeral=True)
 
 @bot.tree.command(name="setup", description="ตั้งค่าปุ่มส่งข้อความ")
 async def setup(interaction: discord.Interaction):
