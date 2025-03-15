@@ -91,7 +91,7 @@ class RecipientSelectView(discord.ui.View):
                 min_values=1, max_values=min(3, len(options)),
                 options=options
             )
-            select_menu.callback = self.select_recipient
+            select_menu.callback = self.select_recipient_callback
             self.add_item(select_menu)
         
         if self.page > 0:
@@ -99,15 +99,28 @@ class RecipientSelectView(discord.ui.View):
         if end < len(self.members):
             self.add_item(NextPageButton(self))
 
-class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความถึงใครบางคน"):
-    message = discord.ui.TextInput(label="พิมพ์ข้อความที่ต้องการส่ง", style=discord.TextStyle.paragraph, required=True)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        all_members = [member for member in interaction.guild.members if not member.bot]
-        if not all_members:
-            await interaction.response.send_message("❌ ไม่พบสมาชิกในเซิร์ฟเวอร์", ephemeral=True)
+    async def select_recipient_callback(self, interaction: discord.Interaction):
+        recipients = [interaction.guild.get_member(int(user_id)) for user_id in interaction.data["values"]]
+        recipients = [user for user in recipients if user]
+        if not recipients:
+            await interaction.response.send_message("❌ ไม่พบผู้รับ กรุณาลองใหม่", ephemeral=True)
             return
-        await interaction.response.send_message("📌 กรุณาเลือกผู้รับ:", view=RecipientSelectView(self.message.value, interaction.user, all_members), ephemeral=True)
+        
+        mentions = " ".join([user.mention for user in recipients])
+        final_message = f"{mentions}\n{self.message_content}"
+        announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
+        
+        if announce_channel:
+            await announce_channel.send(final_message)
+        else:
+            for user in recipients:
+                try:
+                    await user.send(self.message_content)
+                except discord.Forbidden:
+                    logging.error(f"ไม่สามารถส่งข้อความถึง {user.display_name}")
+        
+        await log_message(self.sender, recipients, self.message_content)
+        await interaction.response.send_message("✅ ข้อความถูกส่งแล้ว!", ephemeral=True)
 
 @bot.tree.command(name="setup", description="ตั้งค่าการส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
