@@ -1,15 +1,13 @@
-from flask import Flask
-from threading import Thread
+from fastapi import FastAPI
+import uvicorn
+import os
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route('/')
-def home():
-    return "Discord Bot is Running!"
+@app.get("/")
+def read_root():
+    return {"message": "Hello from Railway!"}
 
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
-def server_on():
-    thread = Thread(target=app.run, kwargs={"host":"0.0.0.0","port":8080})
-    thread.start()
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))  # ใช้ PORT จาก Environment Variables
+    uvicorn.run(app, host="0.0.0.0", port=port)
