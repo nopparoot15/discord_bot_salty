@@ -59,8 +59,8 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(f"{member.id}")  # ใช้ user_id แทน @mention ใน log
-                    remaining_words.append(f"@{member.display_name}")
+                    mentions.append(f"{member.display_name}")  # ใช้ชื่อผู้ใช้แทน @mention ใน log
+                    remaining_words.append(member.display_name)
                 else:
                     remaining_words.append(word)
             else:
@@ -76,8 +76,10 @@ async def on_message(message):
                 bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
-            # Log message content without mentions
-            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})"
+            # Log message content without @mentions but with usernames
+            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
+            if mentions:
+                log_entry += f" | Mentions: {', '.join(mentions)}"
             await log_message(log_entry)
 
             # Delete the original message
