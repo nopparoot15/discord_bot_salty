@@ -16,6 +16,7 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def log_message(content):
+    asyncio.create_task(_send_log(content))  # ทำให้ log ทำงานแบบ async
     try:
         log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
         await log_channel.send(content)
@@ -27,7 +28,9 @@ async def log_message(content):
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
-    await bot.tree.sync()
+    if not hasattr(bot, 'synced'):
+        await bot.tree.sync()
+        bot.synced = True  # ป้องกันการ Sync ซ้ำ
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
 @bot.event
@@ -89,6 +92,11 @@ async def ping(ctx):
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
+    # ตรวจสอบว่าข้อความ Embed นี้มีอยู่แล้วหรือไม่
+    async for message in interaction.channel.history(limit=10):  # ตรวจแค่ 10 ข้อความล่าสุด
+        if message.author == bot.user and message.embeds:
+            await interaction.response.send_message("⚠️ ระบบได้ถูกตั้งค่าไว้แล้ว", ephemeral=True)
+            return
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
         await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
@@ -112,7 +120,7 @@ async def update(ctx):
     await ctx.send("🔄 กำลังอัปเดตบอท โปรดรอสักครู่...")
     await log_message("🔄 บอทกำลังรีสตาร์ทตามคำสั่งอัปเดต")
     try:
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        os._exit(0)  # ใช้วิธีปิดบอท ให้โฮสต์รันใหม่เอง
     except Exception as e:
         await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
         await log_message(f"❌ รีสตาร์ทบอทล้มเหลว: {e}")
