@@ -13,7 +13,6 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 
 async def log_message(content):
     try:
@@ -99,4 +98,5 @@ async def setup(interaction: discord.Interaction):
     
     await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name} โดย {interaction.user} ({interaction.user.id})")
 
+server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 bot.run(TOKEN)
