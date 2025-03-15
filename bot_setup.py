@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from log_utils import setup_logging, send_log_to_discord
 import os
-import commands  # นำเข้าไฟล์ commands.py เพื่อโหลดคำสั่ง
 
 logger = setup_logging()
 webhook_url = "https://discord.com/api/webhooks/1350546611327078464/17AFMw_4NM7bvaArtO52Sl1CkThz9gJqai5V4CwJS2J0UD_H3up1nyDsheFSD93ODxbu"
@@ -28,4 +27,5 @@ token = os.getenv('TOKEN')
 if not token:
     raise ValueError("No TOKEN found in environment variables")
 
-bot.run(token)
+def run_bot():
+    bot.run(token)
