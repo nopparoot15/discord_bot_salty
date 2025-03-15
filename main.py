@@ -1,18 +1,16 @@
 import discord
 from discord.ext import commands
-import os
 from myserver import server_on
+import os
 
-TOKEN = os.getenv("TOKEN")  # token จาก Environment
+TOKEN = os.getenv('TOKEN')
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # เปลี่ยนเป็น ID ห้องที่ใช้รับข้อความ
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # 🔹 เปลี่ยนเป็น ID ห้องที่ใช้รับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-server_on()  # สำหรับให้บอทออนไลน์บน Render
 
 @bot.event
 async def on_ready():
@@ -44,16 +42,19 @@ async def on_message(message):
 
     if mentions:
         final_message = f"{mention_text}\n{final_message}"
+    else:
+        final_message = " ".join(remaining_words)
 
     announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
     if announce_channel:
         await announce_channel.send(final_message)
         await message.delete()
 
-    await bot.process_commands(message)  # เพิ่มตรงนี้เพื่อให้คำสั่งทำงาน
+    await bot.process_commands(message)  # เพื่อให้คำสั่งอื่นทำงานได้
 
 @bot.command()
 async def ping(ctx):
-    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
+    await ctx.send('🏓 Pong!')
 
+server_on()  # เรียกใช้ฟังก์ชันเปิดเซิร์ฟเวอร์
 bot.run(os.getenv('TOKEN'))
