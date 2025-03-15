@@ -45,53 +45,69 @@ async def on_message(message):
         return
 
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
-        content = message.content
-        mentions = []
-        remaining_words = []
+        # Create a button for sending the message
+        class ConfirmButton(discord.ui.View):
+            def __init__(self):
+                super().__init__(timeout=60)
 
-        for word in content.split():
-            if word.startswith('@'):
-                username = word[1:]
-                member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
-                if member:
-                    mentions.append(f"@{member.display_name}")  # ไม่ใช้ mention จริงใน log
-                else:
-                    remaining_words.append(word)
-            else:
-                remaining_words.append(word)
+            @discord.ui.button(label="ส่งข้อความ", style=discord.ButtonStyle.green)
+            async def send_message(self, interaction: discord.Interaction, button: discord.ui.Button):
+                if interaction.user != message.author:
+                    await interaction.response.send_message("คุณไม่มีสิทธิ์ใช้ปุ่มนี้", ephemeral=True)
+                    return
 
-        mention_text = " ".join(mentions)
-        final_message = " ".join(remaining_words)
+                content = message.content
+                mentions = []
+                remaining_words = []
 
-        if mentions and final_message.strip():
-            final_message = f"{mention_text}\n{final_message}"
+                for word in content.split():
+                    if word.startswith('@'):
+                        username = word[1:]
+                        member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
+                        if member:
+                            mentions.append(member.mention)  # ใช้ mention จริงใน message
+                        else:
+                            remaining_words.append(word)
+                    else:
+                        remaining_words.append(word)
 
-        try:
-            announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            
-            # Check if the message is new or sufficiently different from the last sent one
-            current_time = time.time()
-            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
-                bot.last_message_content = final_message
-                bot.last_message_time = current_time
-                await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
+                mention_text = " ".join(mentions)
+                final_message = " ".join(remaining_words)
 
-            # Log message content and mentions
-            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
-            if mentions:
-                log_entry += f" | Mentions: {', '.join(mentions)}"
-            await log_message(log_entry)
-            
-            # Delete the original message
-            try:
-                await message.delete()
-            except discord.errors.Forbidden:
-                print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
+                if mentions and final_message.strip():
+                    final_message = f"{mention_text}\n{final_message}"
 
-        except (discord.errors.NotFound, discord.errors.Forbidden) as e:
-            error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
-            print(error_msg)
-            await log_message(error_msg)
+                try:
+                    announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
+                    
+                    # Check if the message is new or sufficiently different from the last sent one
+                    current_time = time.time()
+                    if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
+                        bot.last_message_content = final_message
+                        bot.last_message_time = current_time
+                        await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
+
+                    # Log message content and mentions
+                    log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
+                    if mentions:
+                        log_entry += f" | Mentions: {', '.join([m.display_name for m in mentions])}"
+                    await log_message(log_entry)
+                    
+                    # Delete the original message
+                    try:
+                        await message.delete()
+                    except discord.errors.Forbidden:
+                        print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
+
+                    await interaction.response.send_message("ข้อความถูกส่งเรียบร้อยแล้ว", ephemeral=True)
+
+                except (discord.errors.NotFound, discord.errors.Forbidden) as e:
+                    error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
+                    print(error_msg)
+                    await log_message(error_msg)
+
+        view = ConfirmButton()
+        await message.channel.send("กดปุ่มเพื่อส่งข้อความ", view=view)
 
     await bot.process_commands(message)
 
@@ -99,27 +115,6 @@ async def on_message(message):
 async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
     await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
-
-@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
-async def setup(interaction: discord.Interaction):
-    # ตรวจสอบว่าข้อความ Embed นี้มีอยู่แล้วหรือไม่
-    async for message in interaction.channel.history(limit=10):  # ตรวจแค่ 10 ข้อความล่าสุด
-        if message.author == bot.user and message.embeds:
-            await interaction.response.send_message("⚠️ ระบบได้ถูกตั้งค่าไว้แล้ว", ephemeral=True)
-            return
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
-        await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
-        return
-
-    embed = discord.Embed(
-        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
-        color=discord.Color.blue()
-    )
-
-    await interaction.channel.send(embed=embed)
-    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name}")
 
 @bot.command()
 async def update(ctx):
