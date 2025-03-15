@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import os
+import sys
 from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
@@ -93,6 +94,16 @@ async def setup(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed)
     await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name}")
+
+@bot.command()
+async def update(ctx):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
+        return
+    
+    await ctx.send("🔄 กำลังอัปเดตบอท...")
+    await log_message("🔄 บอทกำลังรีสตาร์ทตามคำสั่งอัปเดต")
+    os.execv(sys.executable, ['python'] + sys.argv)
 
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 bot.run(TOKEN)
