@@ -26,7 +26,3 @@ try:
 except Exception as e:
     logger.error("Error occurred", exc_info=e)
     send_log_to_discord(webhook_url, f"Error occurred: {str(e)}")
-
-# Run the bot commands
-if __name__ == "__main__":
-    bot_setup.bot.run(config.TOKEN)
