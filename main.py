@@ -6,11 +6,6 @@ import asyncio  # ✅ จัดให้อยู่กับ standard library
 import discord
 from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
 
-from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์  # ✅ จัดให้อยู่กับ standard library
-
-import discord
-from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
-
 from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์
 
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
@@ -74,9 +69,10 @@ async def on_message(message):
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             
 
-            if not getattr(bot, 'last_message_content', None) or bot.last_message_content != final_message or time.time() - getattr(bot, 'last_message_time', 0) > 2:
+            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and time.time() - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
                 bot.last_message_time = time.time()
+                bot.last_log_message = final_message  # ป้องกันการส่งข้อความซ้ำ
                 
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
             try:
@@ -86,6 +82,7 @@ async def on_message(message):
             if not getattr(bot, 'last_log_message', None) or bot.last_log_message != final_message:
                 bot.last_log_message = final_message
                 await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
+                return
             return  # ป้องกันบอท process command โดยไม่จำเป็น
         except discord.errors.NotFound:
             error_msg = "❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID"
