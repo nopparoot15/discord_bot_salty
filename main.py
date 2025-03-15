@@ -1,26 +1,28 @@
 import os
-import sys
 import time
-import asyncio  # ✅ จัดให้อยู่กับ standard library
-
+import asyncio
 import discord
-from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
+from discord.ext import commands
 
-from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์
+from myserver import server_on
 
-TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
+# Configuration
+TOKEN = os.getenv("TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
-LOG_CHANNEL_ID = 1350380441504448512  # ID ห้องเก็บ logs
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
+LOG_CHANNEL_ID = 1350380441504448512
 
+# Initialize bot with intents
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def log_message(content):
-    print(f"[LOG] {content}")  # ✅ Debugging log
-    asyncio.create_task(_send_log(content))  # ทำให้ log ทำงานแบบ async
+    """Log a message to the log channel."""
+    print(f"[LOG] {content}")
+    await _send_log(content)
 
 async def _send_log(content):
     try:
@@ -33,14 +35,16 @@ async def _send_log(content):
 
 @bot.event
 async def on_ready():
+    """Event handler for when the bot is ready."""
     if not getattr(bot, 'synced', False):
         await bot.tree.sync()
-        bot.synced = True  # ป้องกันการ Sync ซ้ำ
+        bot.synced = True
         print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
         await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
 @bot.event
 async def on_message(message):
+    """Event handler for when a message is received."""
     if message.author.bot:
         return
 
@@ -49,12 +53,13 @@ async def on_message(message):
         mentions = []
         remaining_words = []
 
+        # Process mentions
         for word in content.split():
             if word.startswith('@'):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(f"<{member.display_name}>")  # ใช้ <mention> แทน @ ใน log
+                    mentions.append(f"<{member.display_name}>")
                 else:
                     remaining_words.append(word)
             else:
@@ -68,8 +73,6 @@ async def on_message(message):
 
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            
-            # Check if the message is new or sufficiently different from the last sent one
             current_time = time.time()
             if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
@@ -81,7 +84,7 @@ async def on_message(message):
             if mentions:
                 log_entry += f" | Mentions: {', '.join(mentions)}"
             await log_message(log_entry)
-            
+
             # Delete the original message
             try:
                 await message.delete()
@@ -97,13 +100,14 @@ async def on_message(message):
 
 @bot.command()
 async def ping(ctx):
+    """Ping command to check if the bot is online."""
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
     await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
-    # ตรวจสอบว่าข้อความ Embed นี้มีอยู่แล้วหรือไม่
-    async for message in interaction.channel.history(limit=10):  # ตรวจแค่ 10 ข้อความล่าสุด
+    """Setup command to initialize the anonymous message system."""
+    async for message in interaction.channel.history(limit=10):
         if message.author == bot.user and message.embeds:
             await interaction.response.send_message("⚠️ ระบบได้ถูกตั้งค่าไว้แล้ว", ephemeral=True)
             return
@@ -123,6 +127,7 @@ async def setup(interaction: discord.Interaction):
 
 @bot.command()
 async def update(ctx):
+    """Command to update and restart the bot."""
     if not ctx.author.guild_permissions.administrator:
         await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
         return
@@ -137,6 +142,7 @@ async def update(ctx):
 
 @bot.command()
 async def mute_channel(ctx):
+    """Command to mute a specific channel."""
     if not ctx.author.guild_permissions.administrator:
         await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
         return
@@ -155,5 +161,6 @@ async def mute_channel(ctx):
         await ctx.send("❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนลนี้")
         await log_message(f"❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนลที่มี ID {channel_id}")
 
-server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
+# Start the server and run the bot
+server_on()
 bot.run(TOKEN)
