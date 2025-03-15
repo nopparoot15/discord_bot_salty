@@ -6,6 +6,11 @@ import asyncio  # ✅ จัดให้อยู่กับ standard library
 import discord
 from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
 
+from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์  # ✅ จัดให้อยู่กับ standard library
+
+import discord
+from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
+
 from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์
 
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
@@ -32,7 +37,7 @@ async def _send_log(content):
 
 @bot.event
 async def on_ready():
-    if not hasattr(bot, 'synced') or not getattr(bot, 'synced', False):
+    if not getattr(bot, 'synced', False):
         await bot.tree.sync()
         bot.synced = True  # ป้องกันการ Sync ซ้ำ
         print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
@@ -69,16 +74,16 @@ async def on_message(message):
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             
 
-            if not hasattr(bot, 'last_message_content') or bot.last_message_content != final_message or time.time() - getattr(bot, 'last_message_time', 0) > 2:
+            if not getattr(bot, 'last_message_content', None) or bot.last_message_content != final_message or time.time() - getattr(bot, 'last_message_time', 0) > 2:
                 bot.last_message_content = final_message
                 bot.last_message_time = time.time()
                 
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
             try:
-    await message.delete()
-except discord.errors.Forbidden:
-    print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
-            if not hasattr(bot, 'last_log_message') or bot.last_log_message != final_message:
+                await message.delete()
+            except discord.errors.Forbidden:
+                print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
+            if not getattr(bot, 'last_log_message', None) or bot.last_log_message != final_message:
                 bot.last_log_message = final_message
                 await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
             return  # ป้องกันบอท process command โดยไม่จำเป็น
