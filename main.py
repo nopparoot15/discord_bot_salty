@@ -47,10 +47,6 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # Skip processing messages in the MESSAGE_INPUT_CHANNEL_ID
-    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
-        return
-
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
         content = message.content
         mentions = []
