@@ -56,8 +56,6 @@ async def on_message(message):
                 if member:
                     mentions.append(member.mention)  # แปลงเป็น mention จริงเฉพาะตอนส่งไปที่ ANNOUNCE_CHANNEL_ID
                 else:
-                    remaining_words.append(word)
-            else:
                 remaining_words.append(word)
 
         mention_text = " ".join(mentions)
@@ -72,8 +70,7 @@ async def on_message(message):
 
             if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and time.time() - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
-                bot.last_message_time = time.time()
-                bot.last_log_message = final_message  # ป้องกันการส่งข้อความซ้ำ
+                bot.last_message_time = time.time()  # ป้องกันการส่งข้อความซ้ำ
                 
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
             try:
@@ -85,12 +82,8 @@ async def on_message(message):
                 await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
                 return
             return  # ป้องกันบอท process command โดยไม่จำเป็น
-        except discord.errors.NotFound:
-            error_msg = "❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID"
-            print(error_msg)
-            await log_message(error_msg)
-        except discord.errors.Forbidden:
-            error_msg = "❌ บอทไม่มีสิทธิ์ส่งข้อความไปยังช่องประกาศ"
+        except (discord.errors.NotFound, discord.errors.Forbidden) as e:
+            error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
             print(error_msg)
             await log_message(error_msg)
 
