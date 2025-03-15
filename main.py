@@ -43,7 +43,7 @@ class SendMessageModal(discord.ui.Modal):
         super().__init__(title="ส่งข้อความนิรนาม")
         self.message_content = discord.ui.TextInput(label="ข้อความ", style=discord.TextStyle.paragraph)
         self.add_item(self.message_content)
-        self.mention_user = discord.ui.TextInput(label="Mention ผู้ใช้ (ใส่ชื่อผู้ใช้, คั่นด้วยช่องว่าง)", style=discord.TextStyle.short)
+        self.mention_user = discord.ui.TextInput(label="Mention ผู้ใช้", style=discord.TextStyle.short)
         self.add_item(self.mention_user)
 
     async def on_submit(self, interaction: discord.Interaction):
