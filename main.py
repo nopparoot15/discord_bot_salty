@@ -59,8 +59,8 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(f"@{member.display_name}")
-                    remaining_words.append(f"<{member.display_name}>")  # แทนที่ @mention เป็น <mention>
+                    mentions.append(f"{member.id}")  # ใช้ user_id แทน @mention ใน log
+                    remaining_words.append(f"@{member.display_name}")
                 else:
                     remaining_words.append(word)
             else:
@@ -157,6 +157,21 @@ async def mute_channel(ctx):
     except discord.errors.Forbidden:
         await ctx.send("❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนลนี้")
         await log_message(f"❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนลที่มี ID {channel_id}")
+
+@bot.command()
+async def delete(ctx, number: int):
+    """Command to delete a specified number of messages from the current channel."""
+    if not ctx.author.guild_permissions.manage_messages:
+        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
+        return
+
+    if number <= 0:
+        await ctx.send("❌ จำนวนข้อความที่ต้องการลบต้องมากกว่า 0")
+        return
+
+    deleted = await ctx.channel.purge(limit=number)
+    await ctx.send(f"🗑️ ลบข้อความทั้งหมด {len(deleted)} ข้อความเรียบร้อยแล้ว", delete_after=5)
+    await log_message(f"🗑️ {ctx.author} ({ctx.author.id}) ลบข้อความทั้งหมด {len(deleted)} ข้อความในช่อง {ctx.channel.name}")
 
 # Start the server and run the bot
 server_on()
