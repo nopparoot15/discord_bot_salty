@@ -1,95 +1,79 @@
 import discord
 from discord.ext import commands
 import os
-import logging
 from myserver import server_on
 
-# ตั้งค่าระบบ logging
-logging.basicConfig(level=logging.INFO)
-
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-LOG_CHANNEL_ID = 1350380441504448512
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
-server_on()  # เปิดเซิร์ฟเวอร์ HTTP
 
-async def log_message(sender: discord.Member, recipient: discord.Member, message: str):
-    """บันทึก log ของการส่งข้อความ"""
-    log_channel = bot.get_channel(LOG_CHANNEL_ID)
-    log_text = (f"📌 **ข้อความนิรนามถูกส่ง**\n"
-                f"👤 **ผู้ส่ง:** {sender} (ID: {sender.id})\n"
-                f"🎯 **ผู้รับ:** {recipient} (ID: {recipient.id})\n"
-                f"💬 **เนื้อหา:** {message}")
-    if log_channel:
-        try:
-            await log_channel.send(log_text)
-        except discord.Forbidden:
-            logging.error("❌ บอทไม่มีสิทธิ์ส่ง log!")
-    else:
-        logging.info(log_text)
+server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 
 @bot.event
 async def on_ready():
-    logging.info(f"✅ บอทออนไลน์: {bot.user}")
-    try:
-        await bot.tree.sync()
-        logging.info("✅ คำสั่ง Slash ถูกซิงค์แล้ว!")
-    except Exception as e:
-        logging.error(f"❌ ซิงค์คำสั่ง Slash ล้มเหลว: {e}")
+    print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
+    await bot.tree.sync()  # ซิงค์คำสั่ง Slash Commands
 
-class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความ"):
-    recipient = discord.ui.TextInput(label="กรอก ID ผู้รับ", required=True)
-    message = discord.ui.TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    
+    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
+        content = message.content
+        mentions = []
+        remaining_words = []
 
-    async def on_submit(self, interaction: discord.Interaction):
-        recipient_id = self.recipient.value.strip()
-        message_content = self.message.value
-        
-        recipient = interaction.guild.get_member(int(recipient_id))
-        if not recipient or recipient.bot:
-            await interaction.response.send_message("❌ ไม่พบผู้รับ หรือไม่สามารถส่งหาบอทได้", ephemeral=True)
-            return
-        
+        for word in content.split():
+            if word.startswith('@'):
+                username = word[1:]
+                member = discord.utils.find(lambda m: m.name == username or m.display_name == username, message.guild.members)
+                if member:
+                    mentions.append(member.mention)
+                else:
+                    remaining_words.append(word)
+            else:
+                remaining_words.append(word)
+
+        mention_text = " ".join(mentions)
+        final_message = " ".join(remaining_words)
+
+        if mentions:
+            final_message = f"{mention_text}\n{final_message}"
+
         try:
-            await recipient.send(message_content)
-            await log_message(interaction.user, recipient, message_content)
-            await interaction.response.send_message("✅ ข้อความถูกส่งแล้ว!", ephemeral=True)
-        except discord.Forbidden:
-            await interaction.response.send_message("❌ ไม่สามารถส่งข้อความถึงผู้รับ", ephemeral=True)
+            announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
+            await announce_channel.send(final_message)
+            await message.delete()
+        except discord.errors.NotFound:
+            print("❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID")
+        except discord.errors.Forbidden:
+            print("❌ บอทไม่มีสิทธิ์ส่งข้อความไปยังช่องประกาศ")
 
-class SetupButtonView(discord.ui.View):
-    """View สำหรับปุ่มส่งข้อความนิรนาม"""
-    def __init__(self):
-        super().__init__(timeout=None)
+    await bot.process_commands(message)
 
-    @discord.ui.button(label="📩 ส่งข้อความนิรนาม", style=discord.ButtonStyle.primary)
-    async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(MessageModal())
+@bot.command()
+async def ping(ctx):
+    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
 
-@bot.tree.command(name="setup", description="ตั้งค่าปุ่มส่งข้อความ")
+@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
         return
-    
+
     embed = discord.Embed(
-        title="📩 ฝากข้อความนิรนาม",
-        description="กดปุ่มด้านล่างเพื่อส่งข้อความแบบไม่ระบุตัวตน!",
+        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
+        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
         color=discord.Color.blue()
     )
-    await interaction.response.defer(thinking=True)
-    
-    try:
-        await interaction.channel.send(embed=embed, view=SetupButtonView())
-        await interaction.followup.send("✅ ปุ่มถูกสร้างแล้ว!", ephemeral=True)
-        logging.info("✅ /setup ทำงานสำเร็จ!")
-    except Exception as e:
-        logging.error(f"❌ เกิดข้อผิดพลาดใน /setup: {e}")
-        await interaction.followup.send("❌ มีข้อผิดพลาด", ephemeral=True)
+
+    await interaction.channel.send(embed=embed)
+    await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
 
 bot.run(TOKEN)
