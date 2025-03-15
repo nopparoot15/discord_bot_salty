@@ -54,7 +54,7 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(member.mention)
+                    mentions.append(f"@{member.display_name}")  # ไม่ใช้ mention จริงใน log
                 else:
                     remaining_words.append(word)
             else:
@@ -76,10 +76,11 @@ async def on_message(message):
                 bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
-            # Log if the message is not the same as last log message
-            if not getattr(bot, 'last_log_message', None) or bot.last_log_message != final_message:
-                bot.last_log_message = final_message
-                await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
+            # Log message content and mentions
+            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
+            if mentions:
+                log_entry += f" | Mentions: {', '.join(mentions)}"
+            await log_message(log_entry)
             
             # Delete the original message
             try:
