@@ -76,10 +76,8 @@ async def on_message(message):
                 bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
-            # Log message content and mentions
-            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {final_message}"
-            if mentions:
-                log_entry += f" | Mentions: {', '.join(mentions)}"
+            # Log message content without mentions
+            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})"
             await log_message(log_entry)
 
             # Delete the original message
@@ -159,19 +157,18 @@ async def mute_channel(ctx):
         await log_message(f"❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนลที่มี ID {channel_id}")
 
 @bot.command()
-async def delete(ctx, number: int):
-    """Command to delete a specified number of messages from the current channel."""
+async def delete(ctx, target: discord.Member):
+    """Command to delete messages from a specified user in the current channel."""
     if not ctx.author.guild_permissions.manage_messages:
         await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
         return
 
-    if number <= 0:
-        await ctx.send("❌ จำนวนข้อความที่ต้องการลบต้องมากกว่า 0")
-        return
+    def is_target_user(m):
+        return m.author == target
 
-    deleted = await ctx.channel.purge(limit=number)
-    await ctx.send(f"🗑️ ลบข้อความทั้งหมด {len(deleted)} ข้อความเรียบร้อยแล้ว", delete_after=5)
-    await log_message(f"🗑️ {ctx.author} ({ctx.author.id}) ลบข้อความทั้งหมด {len(deleted)} ข้อความในช่อง {ctx.channel.name}")
+    deleted = await ctx.channel.purge(limit=100, check=is_target_user)
+    await ctx.send(f"🗑️ ลบข้อความทั้งหมด {len(deleted)} ข้อความจาก {target.display_name} ({target.id}) เรียบร้อยแล้ว", delete_after=5)
+    await log_message(f"🗑️ {ctx.author} ({ctx.author.id}) ลบข้อความทั้งหมด {len(deleted)} ข้อความจาก {target.display_name} ({target.id}) ในช่อง {ctx.channel.name}")
 
 # Start the server and run the bot
 server_on()
