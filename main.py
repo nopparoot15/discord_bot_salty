@@ -2,6 +2,7 @@ from myserver import server_on
 from log_utils import setup_logging, send_log_to_discord
 import os
 import bot_setup
+import commands_setup  # นำเข้าไฟล์ commands_setup.py เพื่อโหลดคำสั่ง
 import event_handlers  # Ensure event handlers are imported to register events
 import config  # Import the config file to use constants like MESSAGE_INPUT_CHANNEL_ID and ANNOUNCE_CHANNEL_ID
 
@@ -21,7 +22,7 @@ try:
 
     logger.info("Starting bot")
     send_log_to_discord(webhook_url, "Starting bot")
-    bot_setup.bot.run(token)
+    bot_setup.run_bot()
 
 except Exception as e:
     logger.error("Error occurred", exc_info=e)
