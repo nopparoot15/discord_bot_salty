@@ -100,7 +100,7 @@ async def setup(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
 
-    await interaction.response.send_message(embed=embed)
+    await interaction.channel.send(embed=embed)
     await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name}")
 
 @bot.command()
