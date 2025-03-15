@@ -5,7 +5,7 @@ from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
+MESSAGE_INPUT_CHANNEL_ID = 123456789012345678  # ID ห้องรับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -20,40 +20,39 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
-    if message.author.bot or message.channel.id != MESSAGE_INPUT_CHANNEL_ID:
+    if message.author.bot:
         return
+    
+    # เฉพาะข้อความนิรนามที่ใช้ได้แค่ใน MESSAGE_INPUT_CHANNEL_ID
+    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
+        content = message.content
+        mentions = []
+        remaining_words = []
 
-    content = message.content
-    mentions = []
-    remaining_words = []
-
-    for word in content.split():
-        if word.startswith('@'):
-            username = word[1:]
-            member = discord.utils.get(message.guild.members, name=username)
-            if member:
-                mentions.append(member.mention)
+        for word in content.split():
+            if word.startswith('@'):
+                username = word[1:]
+                member = discord.utils.get(message.guild.members, name=username)
+                if member:
+                    mentions.append(member.mention)
+                else:
+                    remaining_words.append(word)
             else:
                 remaining_words.append(word)
-        else:
-            remaining_words.append(word)
 
-    mention_text = " ".join(mentions)
-    final_message = " ".join(remaining_words)
+        mention_text = " ".join(mentions)
+        final_message = " ".join(remaining_words)
 
-    if mentions:
-        final_message = f"{mention_text}\n{final_message}"
+        if mentions:
+            final_message = f"{mention_text}\n{final_message}"
 
-    announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
-    if announce_channel:
-        await announce_channel.send(final_message)
-        await message.delete()
-
+        announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
+        if announce_channel:
+            await announce_channel.send(final_message)
+            await message.delete()
+    
+    # อนุญาตให้ทุกคำสั่งทำงานได้ในทุกห้อง
     await bot.process_commands(message)
-
-@bot.event
-async def on_ready():
-    print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
 
 @bot.command()
 async def ping(ctx):
@@ -65,8 +64,8 @@ async def setup(interaction: discord.Interaction):
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
         return
 
-    embed = discord.Embed(title="📩 ส่งข้อความนิรนาม",
-                          description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความนิรนาม\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+    embed = discord.Embed(title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
+                          description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
                           color=discord.Color.blue())
 
     await interaction.channel.send(embed=embed)
