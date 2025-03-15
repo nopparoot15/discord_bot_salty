@@ -36,16 +36,16 @@ async def on_message(message):
         return
     
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
-        content = message.content
+        content = message.content.replace('@', '＠')  # เปลี่ยน @ เป็นอักขระที่คล้ายกันเพื่อป้องกันแจ้งเตือน
         mentions = []
         remaining_words = []
 
         for word in content.split():
-            if word.startswith('@'):
+            if word.startswith('＠'):
                 username = word[1:]
                 member = discord.utils.find(lambda m: m.name == username or m.display_name == username, message.guild.members)
                 if member:
-                    mentions.append(member.mention)
+                    mentions.append(member.mention)  # คืนค่า mention จริงเมื่อส่งไปที่ ANNOUNCE_CHANNEL_ID
                 else:
                     remaining_words.append(word)
             else:
@@ -87,7 +87,7 @@ async def setup(interaction: discord.Interaction):
 
     embed = discord.Embed(
         title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ ＠username",
         color=discord.Color.blue()
     )
 
