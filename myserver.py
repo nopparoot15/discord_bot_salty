@@ -1,13 +1,15 @@
 from fastapi import FastAPI
 import uvicorn
 import os
+import threading
 
 app = FastAPI()
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from Railway!"}
+    return {"message": "Discord Bot Server is Running!"}
 
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))  # ใช้ PORT จาก Environment Variables
-    uvicorn.run(app, host="0.0.0.0", port=port)
+def server_on():
+    port = int(os.getenv("PORT", 8000))
+    server_thread = threading.Thread(target=uvicorn.run, args=(app,), kwargs={"host": "0.0.0.0", "port": port}, daemon=True)
+    server_thread.start()
