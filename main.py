@@ -61,7 +61,7 @@ async def on_message(message):
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             await announce_channel.send(final_message)
             await message.delete()
-            await log_message(f"📩 ข้อความถูกส่ง: {final_message}")
+            await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}): {final_message}")
         except discord.errors.NotFound:
             error_msg = "❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID"
             print(error_msg)
@@ -76,13 +76,13 @@ async def on_message(message):
 @bot.command()
 async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
-    await log_message("🏓 Pong! มีการใช้คำสั่ง ping")
+    await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
-        await log_message(f"⚠️ ผู้ใช้ {interaction.user} พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
+        await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
         return
 
     embed = discord.Embed(
@@ -93,6 +93,6 @@ async def setup(interaction: discord.Interaction):
 
     await interaction.channel.send(embed=embed)
     await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
-    await log_message("⚙️ ระบบ setup ถูกตั้งค่าในช่อง: " + interaction.channel.name)
+    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name} โดย {interaction.user} ({interaction.user.id})")
 
 bot.run(TOKEN)
