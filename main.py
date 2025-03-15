@@ -34,10 +34,34 @@ async def log_message(sender: discord.Member, recipients: list, message: str):
     else:
         logging.info(log_text)
 
+class PreviousPageButton(discord.ui.Button):
+    """ปุ่มย้อนกลับ"""
+    def __init__(self, view):
+        super().__init__(label="⬅️ ก่อนหน้า", style=discord.ButtonStyle.secondary)
+        self.view = view
+
+    async def callback(self, interaction: discord.Interaction):
+        if self.view.page > 0:
+            self.view.page -= 1
+            self.view.update_select_menu()
+            await interaction.response.edit_message(view=self.view)
+
+class NextPageButton(discord.ui.Button):
+    """ปุ่มไปหน้าถัดไป"""
+    def __init__(self, view):
+        super().__init__(label="➡️ ถัดไป", style=discord.ButtonStyle.secondary)
+        self.view = view
+
+    async def callback(self, interaction: discord.Interaction):
+        if (self.view.page + 1) * self.view.page_size < len(self.view.members):
+            self.view.page += 1
+            self.view.update_select_menu()
+            await interaction.response.edit_message(view=self.view)
+
 class SetupButtonView(discord.ui.View):
     """ปุ่มเปิด MessageModal สำหรับส่งข้อความนิรนาม"""
     def __init__(self):
-        super().__init__()
+        super().__init__(timeout=None)
 
     @discord.ui.button(label="📩 ส่งข้อความนิรนาม", style=discord.ButtonStyle.primary)
     async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -69,29 +93,11 @@ class RecipientSelectView(discord.ui.View):
             )
             select_menu.callback = self.select_recipient
             self.add_item(select_menu)
-
-    async def select_recipient(self, interaction: discord.Interaction):
-        recipients = [interaction.guild.get_member(int(user_id)) for user_id in interaction.data["values"]]
-        recipients = [user for user in recipients if user]
-        if not recipients:
-            await interaction.response.send_message("❌ ไม่พบผู้รับ กรุณาลองใหม่", ephemeral=True)
-            return
         
-        mentions = " ".join([user.mention for user in recipients])
-        final_message = f"{mentions}\n{self.message_content}"
-        announce_channel = bot.get_channel(ANNOUNCE_CHANNEL_ID)
-        
-        if announce_channel:
-            await announce_channel.send(final_message)
-        else:
-            for user in recipients:
-                try:
-                    await user.send(self.message_content)
-                except discord.Forbidden:
-                    logging.error(f"ไม่สามารถส่งข้อความถึง {user.display_name}")
-        
-        await log_message(self.sender, recipients, self.message_content)
-        await interaction.response.send_message("✅ ข้อความถูกส่งแล้ว!", ephemeral=True)
+        if self.page > 0:
+            self.add_item(PreviousPageButton(self))
+        if end < len(self.members):
+            self.add_item(NextPageButton(self))
 
 class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความถึงใครบางคน"):
     message = discord.ui.TextInput(label="พิมพ์ข้อความที่ต้องการส่ง", style=discord.TextStyle.paragraph, required=True)
@@ -102,20 +108,6 @@ class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความ�
             await interaction.response.send_message("❌ ไม่พบสมาชิกในเซิร์ฟเวอร์", ephemeral=True)
             return
         await interaction.response.send_message("📌 กรุณาเลือกผู้รับ:", view=RecipientSelectView(self.message.value, interaction.user, all_members), ephemeral=True)
-
-@bot.event
-async def on_ready():
-    logging.info(f"✅ บอทออนไลน์: {bot.user}")
-    try:
-        synced_guilds = await bot.tree.sync()
-        logging.info(f"✅ ซิงค์คำสั่ง Slash สำเร็จใน {len(synced_guilds)} เซิร์ฟเวอร์!")
-    except Exception as e:
-        logging.error(f"❌ ไม่สามารถซิงค์คำสั่ง Slash: {e}")
-
-@bot.tree.command(name="ping", description="เช็คสถานะบอท")
-async def ping(interaction: discord.Interaction):
-    latency = round(bot.latency * 1000, 2)
-    await interaction.response.send_message(f"🏓 Pong! บอทยังออนไลน์อยู่! (Latency: {latency}ms)")
 
 @bot.tree.command(name="setup", description="ตั้งค่าการส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
@@ -128,7 +120,8 @@ async def setup(interaction: discord.Interaction):
         description="กดปุ่มด้านล่างเพื่อส่งข้อความแบบไม่ระบุตัวตน!",
         color=discord.Color.blue()
     )
+
+    await interaction.response.defer()  # ป้องกัน Interaction timeout
     await interaction.channel.send(embed=embed, view=SetupButtonView())
-    await interaction.response.send_message("✅ ปุ่มถูกสร้างเรียบร้อยแล้ว!", ephemeral=True)
 
 bot.run(TOKEN)
