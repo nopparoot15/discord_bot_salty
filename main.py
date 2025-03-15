@@ -13,7 +13,6 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-
 async def log_message(content):
     try:
         log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
@@ -90,13 +89,8 @@ async def setup(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
 
-    try:
-        await interaction.response.defer(thinking=False)  # ป้องกัน 'กำลังคิด...'
-        await interaction.followup.send(embed=embed)
-    except discord.errors.InteractionResponded:
-        print("⚠️ Interaction ซ้ำซ้อน แต่ไม่มีผลกระทบ")
-    
-    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name} โดย {interaction.user} ({interaction.user.id})")
+    await interaction.response.send_message(embed=embed)
+    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name}")
 
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 bot.run(TOKEN)
