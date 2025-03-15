@@ -1,16 +1,16 @@
 import os
 import sys
 import time
-import asyncio  # ✅ จัดให้อยู่กับ standard library
+import asyncio
 
 import discord
-from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
+from discord.ext import commands
 
-from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์
+from myserver import server_on
 
-TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
+TOKEN = os.getenv("TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-LOG_CHANNEL_ID = 1350380441504448512  # ID ห้องเก็บ logs
+LOG_CHANNEL_ID = 1350380441504448512
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -18,8 +18,8 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def log_message(content):
-    print(f"[LOG] {content}")  # ✅ Debugging log
-    asyncio.create_task(_send_log(content))  # ทำให้ log ทำงานแบบ async
+    print(f"[LOG] {content}")
+    asyncio.create_task(_send_log(content))
 
 async def _send_log(content):
     try:
@@ -34,65 +34,48 @@ async def _send_log(content):
 async def on_ready():
     if not getattr(bot, 'synced', False):
         await bot.tree.sync()
-        bot.synced = True  # ป้องกันการ Sync ซ้ำ
+        bot.synced = True
         print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
         await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
-class SendMessageModal(discord.ui.Modal):
+class MessageView(discord.ui.View):
     def __init__(self):
-        super().__init__(title="ส่งข้อความนิรนาม")
-        self.message_content = discord.ui.TextInput(label="ข้อความ", style=discord.TextStyle.paragraph)
-        self.add_item(self.message_content)
-        self.mention_user = discord.ui.TextInput(label="Mention ผู้ใช้", style=discord.TextStyle.short)
-        self.add_item(self.mention_user)
+        super().__init__(timeout=60)
 
-    async def on_submit(self, interaction: discord.Interaction):
-        # Process the message and mentions
-        content = self.message_content.value
-        mention_input = self.mention_user.value.split()
-        mentions = []
-        remaining_words = []
-
-        for username in mention_input:
-            member = discord.utils.get(interaction.guild.members, name=username) or discord.utils.get(interaction.guild.members, display_name=username)
-            if member:
-                mentions.append(member.mention)  # ใช้ mention จริงใน message
-            else:
-                remaining_words.append(username)
-
-        mention_text = " ".join(mentions)
-        final_message = f"{mention_text}\n{content}" if mentions else content
-
+    @discord.ui.button(label="ส่งข้อความ", style=discord.ButtonStyle.green)
+    async def send_message(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("กรุณาพิมพ์ข้อความที่ต้องการส่ง:", ephemeral=True)
+        
+        def check(m):
+            return m.author == interaction.user and m.channel == interaction.channel
+        
         try:
-            announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
+            message = await bot.wait_for('message', check=check, timeout=60)
+            await interaction.channel.send("กรุณาพิมพ์ชื่อผู้ใช้ที่ต้องการ @mention (ถ้ามี):", ephemeral=True)
             
-            # Check if the message is new or sufficiently different from the last sent one
+            mention_message = await bot.wait_for('message', check=check, timeout=60)
+            mention_input = mention_message.content.split()
+            mentions = [discord.utils.get(interaction.guild.members, name=username) or discord.utils.get(interaction.guild.members, display_name=username) for username in mention_input]
+            mentions = [member.mention for member in mentions if member]
+
+            final_message = f"{' '.join(mentions)}\n{message.content}" if mentions else message.content
+
+            announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             current_time = time.time()
             if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
                 bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
-            # Log message content and mentions
-            log_entry = f"📩 ข้อความถูกส่งโดย {interaction.user} ({interaction.user.id}) : {content}"
+            log_entry = f"📩 ข้อความถูกส่งโดย {interaction.user} ({interaction.user.id}) : {message.content}"
             if mentions:
                 log_entry += f" | Mentions: {', '.join([m.display_name for m in mentions])}"
             await log_message(log_entry)
 
-            await interaction.response.send_message("ข้อความถูกส่งเรียบร้อยแล้ว", ephemeral=True)
+            await interaction.followup.send("ข้อความถูกส่งเรียบร้อยแล้ว", ephemeral=True)
 
-        except (discord.errors.NotFound, discord.errors.Forbidden) as e:
-            error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
-            print(error_msg)
-            await log_message(error_msg)
-
-class ConfirmButton(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=60)
-
-    @discord.ui.button(label="ส่งข้อความ", style=discord.ButtonStyle.green)
-    async def send_message(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(SendMessageModal())
+        except asyncio.TimeoutError:
+            await interaction.followup.send("หมดเวลาในการตอบสนอง กรุณาลองใหม่อีกครั้ง", ephemeral=True)
 
 @bot.command()
 async def ping(ctx):
@@ -108,7 +91,7 @@ async def update(ctx):
     await ctx.send("🔄 กำลังอัปเดตบอท โปรดรอสักครู่...")
     await log_message("🔄 บอทกำลังรีสตาร์ทตามคำสั่งอัปเดต")
     try:
-        os._exit(0)  # ใช้วิธีปิดบอท ให้โฮสต์รันใหม่เอง
+        os._exit(0)
     except Exception as e:
         await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
         await log_message(f"❌ รีสตาร์ทบอทล้มเหลว: {e}")
@@ -125,9 +108,9 @@ async def setup(ctx):
         description="กดปุ่มด้านล่างเพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention ผู้ใช้ได้ด้วย",
         color=discord.Color.blue()
     )
-    view = ConfirmButton()
+    view = MessageView()
     await ctx.send(embed=embed, view=view)
     await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {ctx.channel.name}")
 
-server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
+server_on()
 bot.run(TOKEN)
