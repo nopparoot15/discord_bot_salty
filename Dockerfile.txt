@@ -1,0 +1,28 @@
+# Use a base image with Python
+FROM python:3.11-slim
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Create a virtual environment and install dependencies
+RUN python -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code into the container
+COPY . .
+
+# Ensure the virtual environment is activated when the container starts
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Command to run the bot
+CMD ["python", "main.py"]
