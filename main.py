@@ -3,6 +3,7 @@ from log_utils import setup_logging, send_log_to_discord
 import os
 import bot_setup
 import event_handlers  # Ensure event handlers are imported to register events
+import config  # Import the config file to use constants like MESSAGE_INPUT_CHANNEL_ID and ANNOUNCE_CHANNEL_ID
 
 # ตั้งค่า logging
 logger = setup_logging()
