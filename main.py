@@ -59,17 +59,14 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(f"<{member.display_name}>")
+                    mentions.append(f"@{member.display_name}")
+                    remaining_words.append(f"<{member.display_name}>")  # แทนที่ @mention เป็น <mention>
                 else:
                     remaining_words.append(word)
             else:
                 remaining_words.append(word)
 
-        mention_text = " ".join(mentions)
         final_message = " ".join(remaining_words)
-
-        if mentions and final_message.strip():
-            final_message = f"{mention_text}\n{final_message}"
 
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
@@ -80,7 +77,7 @@ async def on_message(message):
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
             # Log message content and mentions
-            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
+            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {final_message}"
             if mentions:
                 log_entry += f" | Mentions: {', '.join(mentions)}"
             await log_message(log_entry)
