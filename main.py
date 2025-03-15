@@ -146,6 +146,12 @@ async def setup(interaction: discord.Interaction):
     )
 
     await interaction.response.defer()  # ป้องกัน Interaction timeout
-    await interaction.channel.send(embed=embed, view=SetupButtonView())
+    try:
+        await interaction.channel.send(embed=embed, view=SetupButtonView())
+        logging.info("✅ /setup ทำงานสำเร็จแล้ว!")
+    except Exception as e:
+        logging.error(f"❌ เกิดข้อผิดพลาดใน /setup: {e}")
+        await interaction.followup.send("❌ เกิดข้อผิดพลาดในการตั้งค่า กรุณาลองใหม่!", ephemeral=True)
+
 
 bot.run(TOKEN)
