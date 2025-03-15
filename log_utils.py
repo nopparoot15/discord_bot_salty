@@ -14,6 +14,12 @@ def send_log_to_discord(webhook_url, message):
     if response.status_code != 204:
         raise Exception(f"Failed to send log to Discord: {response.status_code}, {response.text}")
 
+def log_message(bot, message):
+    logger = logging.getLogger(__name__)
+    logger.info(message)
+    webhook_url = "https://discord.com/api/webhooks/1350546611327078464/17AFMw_4NM7bvaArtO52Sl1CkThz9gJqai5V4CwJS2J0UD_H3up1nyDsheFSD93ODxbu"
+    send_log_to_discord(webhook_url, message)
+
 # Example usage
 if __name__ == "__main__":
     logger = setup_logging()
