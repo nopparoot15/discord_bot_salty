@@ -52,12 +52,14 @@ async def on_message(message):
         mention_text = " ".join(mentions)
         final_message = " ".join(remaining_words)
 
-        if mentions:
+        if mentions and final_message.strip():
             final_message = f"{mention_text}\n{final_message}"
 
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
+            if not hasattr(bot, 'last_message_id') or bot.last_message_id != message.id:
+                bot.last_message_id = message.id
+                await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
             await message.delete()
             await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}): {final_message}")
         except discord.errors.NotFound:
