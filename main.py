@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import os
 import sys
+import time
 from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
@@ -58,11 +59,18 @@ async def on_message(message):
 
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            if not hasattr(bot, 'last_message_id') or bot.last_message_id != message.id:
-                bot.last_message_id = message.id
+            import time
+
+            if not hasattr(bot, 'last_message_content') or bot.last_message_content != final_message or time.time() - getattr(bot, 'last_message_time', 0) > 2:
+                bot.last_message_content = final_message
+                bot.last_message_time = time.time()
+                
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
             await message.delete()
-            await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}): {final_message}")
+            if not hasattr(bot, 'last_log_message') or bot.last_log_message != final_message:
+                bot.last_log_message = final_message
+                await log_message(f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id})")
+            return  # ป้องกันบอท process command โดยไม่จำเป็น
         except discord.errors.NotFound:
             error_msg = "❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID"
             print(error_msg)
@@ -101,9 +109,13 @@ async def update(ctx):
         await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
         return
     
-    await ctx.send("🔄 กำลังอัปเดตบอท...")
+    await ctx.send("🔄 กำลังอัปเดตบอท โปรดรอสักครู่...")
     await log_message("🔄 บอทกำลังรีสตาร์ทตามคำสั่งอัปเดต")
-    os.execv(sys.executable, ['python'] + sys.argv)
+    try:
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+    except Exception as e:
+        await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
+        await log_message(f"❌ รีสตาร์ทบอทล้มเหลว: {e}")
 
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 bot.run(TOKEN)
