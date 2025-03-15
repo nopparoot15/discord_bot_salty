@@ -19,6 +19,7 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def log_message(content):
+    print(f"[LOG] {content}")  # ✅ Debugging log
     asyncio.create_task(_send_log(content))  # ทำให้ log ทำงานแบบ async
 
 async def _send_log(content):
