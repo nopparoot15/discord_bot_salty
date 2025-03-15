@@ -51,6 +51,7 @@ async def on_message(message):
         return
 
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID and message.channel.id in muted_channels:
+        await bot.process_commands(message)
         return
 
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
