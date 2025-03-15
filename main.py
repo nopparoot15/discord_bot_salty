@@ -114,7 +114,7 @@ async def setup(interaction: discord.Interaction):
 
     embed = discord.Embed(
         title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ [...]
         color=discord.Color.blue()
     )
 
@@ -134,6 +134,25 @@ async def update(ctx):
     except Exception as e:
         await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
         await log_message(f"❌ รีสตาร์ทบอทล้มเหลว: {e}")
+
+@bot.command()
+async def mute_channel(ctx, channel_name: str):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
+        return
+
+    channel = discord.utils.get(ctx.guild.channels, name=channel_name)
+    if not channel:
+        await ctx.send(f"❌ ไม่พบช่องชื่อ {channel_name}")
+        return
+
+    try:
+        await channel.set_permissions(ctx.guild.default_role, send_messages=False, mention_everyone=False)
+        await ctx.send(f"🔇 ปิดแจ้งเตือนและ @mention สำหรับชาแนล {channel_name} เรียบร้อยแล้ว")
+        await log_message(f"🔇 ปิดแจ้งเตือนและ @mention สำหรับชาแนล {channel_name} โดย {ctx.author} ({ctx.author.id})")
+    except discord.errors.Forbidden:
+        await ctx.send("❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนลนี้")
+        await log_message(f"❌ บอทไม่มีสิทธิ์เปลี่ยนการตั้งค่าของชาแนล {channel_name}")
 
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 bot.run(TOKEN)
