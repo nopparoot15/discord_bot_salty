@@ -43,32 +43,25 @@ class SendMessageModal(discord.ui.Modal):
         super().__init__(title="ส่งข้อความนิรนาม")
         self.message_content = discord.ui.TextInput(label="ข้อความ", style=discord.TextStyle.paragraph)
         self.add_item(self.message_content)
-        self.mention_user = discord.ui.TextInput(label="Mention ผู้ใช้", style=discord.TextStyle.short)
+        self.mention_user = discord.ui.TextInput(label="Mention ผู้ใช้ (ใส่ชื่อผู้ใช้, คั่นด้วยช่องว่าง)", style=discord.TextStyle.short)
         self.add_item(self.mention_user)
 
     async def on_submit(self, interaction: discord.Interaction):
         # Process the message and mentions
         content = self.message_content.value
-        mention_input = self.mention_user.value
+        mention_input = self.mention_user.value.split()
         mentions = []
         remaining_words = []
 
-        for word in content.split():
-            if word.startswith('@'):
-                username = word[1:]
-                member = discord.utils.get(interaction.guild.members, name=username) or discord.utils.get(interaction.guild.members, display_name=username)
-                if member:
-                    mentions.append(member.mention)  # ใช้ mention จริงใน message
-                else:
-                    remaining_words.append(word)
+        for username in mention_input:
+            member = discord.utils.get(interaction.guild.members, name=username) or discord.utils.get(interaction.guild.members, display_name=username)
+            if member:
+                mentions.append(member.mention)  # ใช้ mention จริงใน message
             else:
-                remaining_words.append(word)
+                remaining_words.append(username)
 
         mention_text = " ".join(mentions)
-        final_message = " ".join(remaining_words)
-
-        if mentions and final_message.strip():
-            final_message = f"{mention_text}\n{final_message}"
+        final_message = f"{mention_text}\n{content}" if mentions else content
 
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
