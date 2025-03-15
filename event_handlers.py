@@ -48,7 +48,7 @@ async def on_message(message):
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
             # Log message content without @mentions but with usernames
-            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
+            log_entry = f"📧 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
             for mention in mentions:
                 log_entry = log_entry.replace(f"@{mention}", mention)
             await log_message(bot, log_entry)
