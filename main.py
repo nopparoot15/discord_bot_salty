@@ -6,6 +6,7 @@ from myserver import server_on
 TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
 MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
+LOG_CHANNEL_ID = 1350380441504448512  # ID ห้องเก็บ logs
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -14,10 +15,20 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 
+async def log_message(content):
+    try:
+        log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
+        await log_channel.send(content)
+    except discord.errors.NotFound:
+        print("❌ ไม่พบช่อง logs กรุณาตรวจสอบ LOG_CHANNEL_ID")
+    except discord.errors.Forbidden:
+        print("❌ บอทไม่มีสิทธิ์ส่งข้อความไปยังช่อง logs")
+
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
-    await bot.tree.sync()  # ซิงค์คำสั่ง Slash Commands
+    await bot.tree.sync()
+    await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
 @bot.event
 async def on_message(message):
@@ -50,21 +61,28 @@ async def on_message(message):
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             await announce_channel.send(final_message)
             await message.delete()
+            await log_message(f"📩 ข้อความถูกส่ง: {final_message}")
         except discord.errors.NotFound:
-            print("❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID")
+            error_msg = "❌ ไม่พบช่องประกาศ กรุณาตรวจสอบ ANNOUNCE_CHANNEL_ID"
+            print(error_msg)
+            await log_message(error_msg)
         except discord.errors.Forbidden:
-            print("❌ บอทไม่มีสิทธิ์ส่งข้อความไปยังช่องประกาศ")
+            error_msg = "❌ บอทไม่มีสิทธิ์ส่งข้อความไปยังช่องประกาศ"
+            print(error_msg)
+            await log_message(error_msg)
 
     await bot.process_commands(message)
 
 @bot.command()
 async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
+    await log_message("🏓 Pong! มีการใช้คำสั่ง ping")
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
+        await log_message(f"⚠️ ผู้ใช้ {interaction.user} พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
         return
 
     embed = discord.Embed(
@@ -75,5 +93,6 @@ async def setup(interaction: discord.Interaction):
 
     await interaction.channel.send(embed=embed)
     await interaction.response.send_message("✅ ตั้งค่าเรียบร้อยแล้ว!", ephemeral=True)
+    await log_message("⚙️ ระบบ setup ถูกตั้งค่าในช่อง: " + interaction.channel.name)
 
 bot.run(TOKEN)
