@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from log_utils import setup_logging, send_log_to_discord
+import os
 
 logger = setup_logging()
 webhook_url = "https://discord.com/api/webhooks/1350546611327078464/17AFMw_4NM7bvaArtO52Sl1CkThz9gJqai5V4CwJS2J0UD_H3up1nyDsheFSD93ODxbu"
@@ -25,5 +26,9 @@ async def on_command_error(ctx, error):
 async def ping(ctx):
     await ctx.send('Pong!')
 
-# Replace 'TOKEN' with your actual bot token
-bot.run('TOKEN')
+# Get the bot token from the environment variable
+token = os.getenv('TOKEN')
+if not token:
+    raise ValueError("No TOKEN found in environment variables")
+
+bot.run(token)
