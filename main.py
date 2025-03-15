@@ -19,9 +19,6 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Add a set to keep track of muted channels
-muted_channels = set()
-
 async def log_message(content):
     print(f"[LOG] {content}")
     asyncio.create_task(_send_webhook(content))
@@ -50,8 +47,8 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID and message.channel.id in muted_channels:
-        await bot.process_commands(message)
+    # Skip processing messages in the MESSAGE_INPUT_CHANNEL_ID
+    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
         return
 
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
@@ -106,18 +103,6 @@ async def on_message(message):
 async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
     await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
-
-@bot.command()
-async def mute(ctx):
-    # Add the MESSAGE_INPUT_CHANNEL_ID to the muted channels set
-    muted_channels.add(MESSAGE_INPUT_CHANNEL_ID)
-    await ctx.send('🔕 ปิดการแจ้งเตือนในช่องนี้เรียบร้อยแล้ว')
-
-@bot.command()
-async def unmute(ctx):
-    # Remove the MESSAGE_INPUT_CHANNEL_ID from the muted channels set
-    muted_channels.discard(MESSAGE_INPUT_CHANNEL_ID)
-    await ctx.send('🔔 เปิดการแจ้งเตือนในช่องนี้เรียบร้อยแล้ว')
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
