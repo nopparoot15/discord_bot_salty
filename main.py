@@ -1,5 +1,7 @@
 from myserver import server_on
 from log_utils import setup_logging, send_log_to_discord
+import os
+import bot_setup
 
 # ตั้งค่า logging
 logger = setup_logging()
@@ -9,6 +11,16 @@ try:
     logger.info("Starting server")
     send_log_to_discord(webhook_url, "Starting server")
     server_on()
+
+    # Get the bot token from the environment variable
+    token = os.getenv('TOKEN')
+    if not token:
+        raise ValueError("No TOKEN found in environment variables")
+
+    logger.info("Starting bot")
+    send_log_to_discord(webhook_url, "Starting bot")
+    bot_setup.bot.run(token)
+
 except Exception as e:
     logger.error("Error occurred", exc_info=e)
     send_log_to_discord(webhook_url, f"Error occurred: {str(e)}")
