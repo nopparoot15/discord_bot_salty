@@ -5,7 +5,7 @@ from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")  # token จาก Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1234567890123456789  # เปลี่ยนเป็น ID ห้องที่ใช้รับข้อความ
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # เปลี่ยนเป็น ID ห้องที่ใช้รับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
