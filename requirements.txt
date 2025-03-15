@@ -1,3 +1,4 @@
+```plaintext
 discord.py==2.5.2
 asyncpg==0.30.0
 requests==2.32.3
@@ -12,3 +13,5 @@ markdown-it-py==3.0.0
 pygments==2.19.1
 mdurl==0.1.2
 psycopg2-binary==2.9.5
+fastapi==0.95.0
+```
