@@ -50,8 +50,7 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # Check if the message is in a muted channel
-    if message.channel.id in muted_channels:
+    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID and message.channel.id in muted_channels:
         return
 
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
@@ -109,14 +108,14 @@ async def ping(ctx):
 
 @bot.command()
 async def mute(ctx):
-    # Add the current channel to the muted channels set
-    muted_channels.add(ctx.channel.id)
+    # Add the MESSAGE_INPUT_CHANNEL_ID to the muted channels set
+    muted_channels.add(MESSAGE_INPUT_CHANNEL_ID)
     await ctx.send('🔕 ปิดการแจ้งเตือนในช่องนี้เรียบร้อยแล้ว')
 
 @bot.command()
 async def unmute(ctx):
-    # Remove the current channel from the muted channels set
-    muted_channels.discard(ctx.channel.id)
+    # Remove the MESSAGE_INPUT_CHANNEL_ID from the muted channels set
+    muted_channels.discard(MESSAGE_INPUT_CHANNEL_ID)
     await ctx.send('🔔 เปิดการแจ้งเตือนในช่องนี้เรียบร้อยแล้ว')
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
