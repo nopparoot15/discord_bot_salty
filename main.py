@@ -71,8 +71,4 @@ async def setup(interaction: discord.Interaction):
     await interaction.channel.send(embed=embed)
     await interaction.response.send_message("✅ สร้างกล่องข้อความเรียบร้อยแล้ว", ephemeral=True)
 
-@bot.command()
-async def ping(ctx):
-    await ctx.send('Pong! 🏓')
-
 bot.run(os.getenv("TOKEN"))
