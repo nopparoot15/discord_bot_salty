@@ -43,18 +43,24 @@ async def on_ready():
     except Exception as e:
         logging.error(f"❌ ไม่สามารถซิงค์คำสั่ง Slash: {e}")
 
-@bot.tree.command(name="sync", description="ซิงค์คำสั่ง Slash (Admin เท่านั้น)")
-async def sync(interaction: discord.Interaction):
-    if not interaction.user.guild_permissions.administrator:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
-        return
-    await bot.tree.sync()
-    await interaction.response.send_message("✅ คำสั่ง Slash ถูกซิงค์แล้ว!", ephemeral=True)
+class SetupButtonView(discord.ui.View):
+    """ปุ่มเปิด MessageModal สำหรับส่งข้อความนิรนาม"""
+    def __init__(self):
+        super().__init__(timeout=None)
 
-@bot.tree.command(name="ping", description="เช็คสถานะบอท")
-async def ping(interaction: discord.Interaction):
-    latency = round(bot.latency * 1000, 2)
-    await interaction.response.send_message(f"🏓 Pong! บอทยังออนไลน์อยู่! (Latency: {latency}ms)")
+    @discord.ui.button(label="📩 ส่งข้อความนิรนาม", style=discord.ButtonStyle.primary)
+    async def open_modal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_modal(MessageModal())
+
+class MessageModal(discord.ui.Modal, title="📩 ฝากข้อความถึงใครบางคน"):
+    message = discord.ui.TextInput(label="พิมพ์ข้อความที่ต้องการส่ง", style=discord.TextStyle.paragraph, required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        all_members = [member for member in interaction.guild.members if not member.bot]
+        if not all_members:
+            await interaction.response.send_message("❌ ไม่พบสมาชิกในเซิร์ฟเวอร์", ephemeral=True)
+            return
+        await interaction.response.send_message("📌 กรุณาเลือกผู้รับ:", view=RecipientSelectView(self.message.value, interaction.user, all_members), ephemeral=True)
 
 class PreviousPageButton(discord.ui.Button):
     """ปุ่มย้อนกลับ"""
@@ -63,9 +69,10 @@ class PreviousPageButton(discord.ui.Button):
         self.view = view
 
     async def callback(self, interaction: discord.Interaction):
-        self.view.page -= 1
-        self.view.update_select_menu()
-        await interaction.response.edit_message(view=self.view)
+        if self.view.page > 0:
+            self.view.page -= 1
+            self.view.update_select_menu()
+            await interaction.response.edit_message(view=self.view)
 
 class NextPageButton(discord.ui.Button):
     """ปุ่มไปหน้าถัดไป"""
@@ -74,9 +81,10 @@ class NextPageButton(discord.ui.Button):
         self.view = view
 
     async def callback(self, interaction: discord.Interaction):
-        self.view.page += 1
-        self.view.update_select_menu()
-        await interaction.response.edit_message(view=self.view)
+        if (self.view.page + 1) * self.view.page_size < len(self.view.members):
+            self.view.page += 1
+            self.view.update_select_menu()
+            await interaction.response.edit_message(view=self.view)
 
 class RecipientSelectView(discord.ui.View):
     """เมนูเลือกผู้รับแบบแบ่งหน้า"""
@@ -148,10 +156,10 @@ async def setup(interaction: discord.Interaction):
     await interaction.response.defer()  # ป้องกัน Interaction timeout
     try:
         await interaction.channel.send(embed=embed, view=SetupButtonView())
+        await interaction.followup.send("✅ ปุ่มถูกสร้างเรียบร้อย!", ephemeral=True)  # ป้องกันค้าง "กำลังคิด..."
         logging.info("✅ /setup ทำงานสำเร็จแล้ว!")
     except Exception as e:
         logging.error(f"❌ เกิดข้อผิดพลาดใน /setup: {e}")
         await interaction.followup.send("❌ เกิดข้อผิดพลาดในการตั้งค่า กรุณาลองใหม่!", ephemeral=True)
-
 
 bot.run(TOKEN)
