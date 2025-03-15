@@ -1,18 +1,18 @@
 import os
 import sys
 import time
-import asyncio  # ✅ จัดให้อยู่กับ standard library
-import requests  # ✅ ใช้สำหรับส่งข้อมูลไปยัง webhook
+import asyncio
+import requests
 
 import discord
-from discord.ext import commands  # ✅ จัดให้อยู่กับ third-party libraries
+from discord.ext import commands
 
-from myserver import server_on  # ✅ โมดูลภายในโปรเจกต์
+from myserver import server_on
 
-TOKEN = os.getenv("TOKEN")  # ใส่ token ใน Environment
+TOKEN = os.getenv("TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567  # ID ห้องรับข้อความ
-WEBHOOK_URL = "https://discord.com/api/webhooks/1350546611327078464/17AFMw_4NM7bvaArtO52Sl1CkThz9gJqai5V4CwJS2J0UD_H3up1nyDsheFSD93ODxbu"  # URL ของ webhook สำหรับส่ง logs
+MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
+WEBHOOK_URL = "https://discord.com/api/webhooks/1350546611327078464/17AFMw_4NM7bvaArtO52Sl1CkThz9gJqai5V4CwJS2J0UD_H3up1nyDsheFSD93ODxbu"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -20,8 +20,8 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def log_message(content):
-    print(f"[LOG] {content}")  # ✅ Debugging log
-    asyncio.create_task(_send_webhook(content))  # ส่ง log ไปยัง webhook
+    print(f"[LOG] {content}")
+    asyncio.create_task(_send_webhook(content))
 
 async def _send_webhook(content):
     if WEBHOOK_URL:
@@ -38,7 +38,7 @@ async def _send_webhook(content):
 async def on_ready():
     if not getattr(bot, 'synced', False):
         await bot.tree.sync()
-        bot.synced = True  # ป้องกันการ Sync ซ้ำ
+        bot.synced = True
         print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
         await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
@@ -57,7 +57,7 @@ async def on_message(message):
                 username = word[1:]
                 member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(f"@{member.display_name}")  # ไม่ใช้ mention จริงใน log
+                    mentions.append(f"@{member.display_name}")
                 else:
                     remaining_words.append(word)
             else:
@@ -72,20 +72,17 @@ async def on_message(message):
         try:
             announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
             
-            # Check if the message is new or sufficiently different from the last sent one
             current_time = time.time()
             if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
                 bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
-            # Log message content and mentions
             log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
             if mentions:
                 log_entry += f" | Mentions: {', '.join(mentions)}"
             await log_message(log_entry)
             
-            # Delete the original message
             try:
                 await message.delete()
             except discord.errors.Forbidden:
@@ -105,8 +102,7 @@ async def ping(ctx):
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
-    # ตรวจสอบว่าข้อความ Embed นี้มีอยู่แล้วหรือไม่
-    async for message in interaction.channel.history(limit=10):  # ตรวจแค่ 10 ข้อความล่าสุด
+    async for message in interaction.channel.history(limit=10):
         if message.author == bot.user and message.embeds:
             await interaction.response.send_message("⚠️ ระบบได้ถูกตั้งค่าไว้แล้ว", ephemeral=True)
             return
@@ -133,7 +129,7 @@ async def update(ctx):
     await ctx.send("🔄 กำลังอัปเดตบอท โปรดรอสักครู่...")
     await log_message("🔄 บอทกำลังรีสตาร์ทตามคำสั่งอัปเดต")
     try:
-        os._exit(0)  # ใช้วิธีปิดบอท ให้โฮสต์รันใหม่เอง
+        os._exit(0)
     except Exception as e:
         await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
         await log_message(f"❌ รีสตาร์ทบอทล้มเหลว: {e}")
@@ -163,5 +159,5 @@ async def delete(ctx, target: str, count: int):
         except ValueError:
             await ctx.send("❌ กรุณาระบุจำนวนข้อความที่ต้องการลบ")
 
-server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
+server_on()
 bot.run(TOKEN)
