@@ -3,13 +3,16 @@ from discord.ext import commands
 import os
 from myserver import server_on
 
+TOKEN = os.getenv("TOKEN")  # token จาก Environment
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
+MESSAGE_INPUT_CHANNEL_ID = 123456789012345678  # ใส่ ID ห้องรับข้อความ
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+server_on()  # เปิดเซิร์ฟเวอร์ HTTP สำหรับ Render
 
 @bot.event
 async def on_ready():
@@ -18,7 +21,6 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     if message.author.bot or message.channel.id != MESSAGE_INPUT_CHANNEL_ID:
-        await bot.process_commands(message)
         return
 
     content = message.content
@@ -50,16 +52,27 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-@bot.command()
-async def ping(ctx):
-    await ctx.send('Pong! 🏓')
-
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
 
-from myserver import server_on
+@bot.command()
+async def ping(ctx):
+    await ctx.send('Pong! 🏓')
 
-if __name__ == "__main__":
-    server_on()
-    bot.run(os.getenv("TOKEN"))
+@bot.tree.command(name="setup", description="สร้างกล่องข้อความแนะนำวิธีใช้")
+@commands.has_permissions(administrator=True)
+async def setup(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
+        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+        color=discord.Color.blue()
+    )
+    await interaction.channel.send(embed=embed)
+    await interaction.response.send_message("✅ สร้างกล่องข้อความเรียบร้อยแล้ว", ephemeral=True)
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send('Pong! 🏓')
+
+bot.run(os.getenv("TOKEN"))
