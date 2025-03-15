@@ -36,16 +36,16 @@ async def on_message(message):
         return
     
     if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
-        content = message.content.replace('@', '＠')  # ป้องกันการ mention จริง
+        content = message.content
         mentions = []
         remaining_words = []
 
         for word in content.split():
-            if word.startswith('＠'):
+            if word.startswith('@'):
                 username = word[1:]
-                member = discord.utils.find(lambda m: m.name == username or m.display_name == username, message.guild.members)
+                member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
-                    mentions.append(member.mention)  # ใช้ mention จริงใน ANNOUNCE_CHANNEL_ID
+                    mentions.append(member.mention)  # แปลงเป็น mention จริงเฉพาะตอนส่งไปที่ ANNOUNCE_CHANNEL_ID
                 else:
                     remaining_words.append(word)
             else:
@@ -87,11 +87,16 @@ async def setup(interaction: discord.Interaction):
 
     embed = discord.Embed(
         title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ ＠username",
+        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
         color=discord.Color.blue()
     )
 
-    await interaction.response.send_message(embed=embed)
+    try:
+        await interaction.response.defer(thinking=False)  # ป้องกัน 'กำลังคิด...'
+        await interaction.followup.send(embed=embed)
+    except discord.errors.InteractionResponded:
+        print("⚠️ Interaction ซ้ำซ้อน แต่ไม่มีผลกระทบ")
+    
     await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name} โดย {interaction.user} ({interaction.user.id})")
 
 bot.run(TOKEN)
