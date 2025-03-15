@@ -1,8 +1,0 @@
-import os
-
-# Configuration
-TOKEN = os.getenv("TOKEN")
-LOG_SERVER_ID = int(os.getenv("LOG_SERVER_ID", 1350529878046277834))  # ID ของเซิร์ฟเวอร์ที่ใช้เก็บ logs
-LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", 1350531209377349662))  # ID ของชาแนลที่ใช้เก็บ logs
-ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
