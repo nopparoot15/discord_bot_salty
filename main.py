@@ -4,33 +4,49 @@ import time
 import asyncio
 import requests
 import discord
-import json
 from discord.ext import commands
 from discord import app_commands
 from myserver import server_on
+import psycopg2
 
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Dictionary to store channel IDs for each guild
-guild_settings = {}
+# เชื่อมต่อกับ PostgreSQL
+conn = psycopg2.connect(DATABASE_URL)
+cur = conn.cursor()
 
-def save_guild_settings():
-    with open('guild_settings.json', 'w') as f:
-        json.dump(guild_settings, f)
+# สร้างตารางสำหรับบันทึกการตั้งค่า guild_settings
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS guild_settings (
+        guild_id BIGINT PRIMARY KEY,
+        input_channel_id BIGINT,
+        announce_channel_id BIGINT
+    )
+""")
+conn.commit()
 
-def load_guild_settings():
-    global guild_settings
-    try:
-        with open('guild_settings.json', 'r') as f:
-            guild_settings = json.load(f)
-    except FileNotFoundError:
-        guild_settings = {}
+# ฟังก์ชันบันทึกการตั้งค่า
+def save_guild_settings(guild_id, input_channel_id, announce_channel_id):
+    cur.execute("""
+        INSERT INTO guild_settings (guild_id, input_channel_id, announce_channel_id)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (guild_id) DO UPDATE
+        SET input_channel_id = EXCLUDED.input_channel_id,
+            announce_channel_id = EXCLUDED.announce_channel_id
+    """, (guild_id, input_channel_id, announce_channel_id))
+    conn.commit()
+
+# ฟังก์ชันโหลดการตั้งค่า
+def load_guild_settings(guild_id):
+    cur.execute("SELECT input_channel_id, announce_channel_id FROM guild_settings WHERE guild_id = %s", (guild_id,))
+    return cur.fetchone()
 
 async def log_message(content):
     print(f"[LOG] {content}")
@@ -49,7 +65,6 @@ async def _send_webhook(content):
 
 @bot.event
 async def on_ready():
-    load_guild_settings()
     if not getattr(bot, 'synced', False):
         await bot.tree.sync()
         bot.synced = True
@@ -62,9 +77,10 @@ async def on_message(message):
         return
 
     guild_id = message.guild.id
-    if guild_id in guild_settings:
-        settings = guild_settings[guild_id]
-        if message.channel.id == settings['input_channel_id']:
+    settings = load_guild_settings(guild_id)
+    if settings:
+        input_channel_id, announce_channel_id = settings
+        if message.channel.id == input_channel_id:
             content = message.content
             mentions = []
             remaining_words = []
@@ -87,7 +103,7 @@ async def on_message(message):
                 final_message = f"{mention_text}\n{final_message}"
 
             try:
-                announce_channel = await bot.fetch_channel(settings['announce_channel_id'])
+                announce_channel = await bot.fetch_channel(announce_channel_id)
                 
                 current_time = time.time()
                 if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
@@ -131,12 +147,7 @@ async def setup(interaction: discord.Interaction):
         input_channel = await category.create_text_channel("ส่งข้อความนิรนาม")
         announce_channel = await category.create_text_channel("ประกาศข้อความนิรนาม")
 
-        guild_settings[guild_id] = {
-            'input_channel_id': input_channel.id,
-            'announce_channel_id': announce_channel.id
-        }
-
-        save_guild_settings()  # บันทึกการตั้งค่า
+        save_guild_settings(guild_id, input_channel.id, announce_channel.id)
 
         embed = discord.Embed(
             title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
@@ -209,3 +220,8 @@ async def help_command(interaction: discord.Interaction):
 
 server_on()
 bot.run(TOKEN)
+
+# ปิดการเชื่อมต่อเมื่อไม่ใช้งานแล้ว
+def close_connection():
+    cur.close()
+    conn.close()
