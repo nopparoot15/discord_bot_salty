@@ -7,51 +7,17 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from myserver import server_on
-import psycopg2
-import psycopg2.extras
 
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-DATABASE_URL = os.getenv("DATABASE_URL")
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# เชื่อมต่อกับ PostgreSQL
-try:
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-except Exception as e:
-    print(f"❌ ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้: {e}")
-    sys.exit(1)
-
-# สร้างตารางสำหรับบันทึกการตั้งค่า guild_settings
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS guild_settings (
-        guild_id BIGINT PRIMARY KEY,
-        input_channel_id BIGINT,
-        announce_channel_id BIGINT
-    )
-""")
-conn.commit()
-
-# ฟังก์ชันบันทึกการตั้งค่า
-def save_guild_settings(guild_id, input_channel_id, announce_channel_id):
-    cur.execute("""
-        INSERT INTO guild_settings (guild_id, input_channel_id, announce_channel_id)
-        VALUES (%s, %s, %s)
-        ON CONFLICT (guild_id) DO UPDATE
-        SET input_channel_id = EXCLUDED.input_channel_id,
-            announce_channel_id = EXCLUDED.announce_channel_id
-    """, (guild_id, input_channel_id, announce_channel_id))
-    conn.commit()
-
-# ฟังก์ชันโหลดการตั้งค่า
-def load_guild_settings(guild_id):
-    cur.execute("SELECT input_channel_id, announce_channel_id FROM guild_settings WHERE guild_id = %s", (guild_id,))
-    return cur.fetchone()
+# Dictionary to store channel IDs for each guild
+guild_settings = {}
 
 async def log_message(content):
     print(f"[LOG] {content}")
@@ -82,10 +48,9 @@ async def on_message(message):
         return
 
     guild_id = message.guild.id
-    settings = load_guild_settings(guild_id)
-    if settings:
-        input_channel_id, announce_channel_id = settings
-        if message.channel.id == input_channel_id:
+    if guild_id in guild_settings:
+        settings = guild_settings[guild_id]
+        if message.channel.id == settings['input_channel_id']:
             content = message.content
             mentions = []
             remaining_words = []
@@ -108,7 +73,7 @@ async def on_message(message):
                 final_message = f"{mention_text}\n{final_message}"
 
             try:
-                announce_channel = await bot.fetch_channel(announce_channel_id)
+                announce_channel = await bot.fetch_channel(settings['announce_channel_id'])
                 
                 current_time = time.time()
                 if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
@@ -147,28 +112,24 @@ async def setup(interaction: discord.Interaction):
 
     guild_id = interaction.guild.id
 
-    try:
-        category = await interaction.guild.create_category("ข้อความนิรนาม")
-        input_channel = await category.create_text_channel("ส่งข้อความนิรนาม")
-        announce_channel = await category.create_text_channel("ประกาศข้อความนิรนาม")
+    category = await interaction.guild.create_category("ข้อความนิรนาม")
+    input_channel = await category.create_text_channel("ส่งข้อความนิรนาม")
+    announce_channel = await category.create_text_channel("ประกาศข้อความนิรนาม")
 
-        save_guild_settings(guild_id, input_channel.id, announce_channel.id)
+    guild_settings[guild_id] = {
+        'input_channel_id': 1350760225136840795,
+        'announce_channel_id': 1350760229763022899
+    }
 
-        embed = discord.Embed(
-            title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-            description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
-            color=discord.Color.blue()
-        )
+    embed = discord.Embed(
+        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
+        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+        color=discord.Color.blue()
+    )
 
-        await input_channel.send(embed=embed)
-        await interaction.response.send_message("✅ ระบบ setup ถูกตั้งค่าเรียบร้อย\n\n(สามารถเปลี่ยนชื่อห้องและจัดเรียงตามสะดวกได้เลย)", ephemeral=True)
-        await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
-    except discord.errors.NotFound as e:
-        await log_message(f"❌ เกิดข้อผิดพลาดในการตั้งค่าระบบ: {e}")
-        await interaction.followup.send("❌ เกิดข้อผิดพลาดในการตั้งค่าระบบ", ephemeral=True)
-    except Exception as e:
-        await log_message(f"❌ เกิดข้อผิดพลาดที่ไม่คาดคิด: {e}")
-        await interaction.followup.send("❌ เกิดข้อผิดพลาดที่ไม่คาดคิด", ephemeral=True)
+    await input_channel.send(embed=embed)
+    await interaction.response.send_message("✅ ระบบ setup ถูกตั้งค่าเรียบร้อย", ephemeral=True)
+    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
 
 @bot.command()
 async def update(ctx):
@@ -208,25 +169,5 @@ async def delete(ctx, count: int, *, target: str = None):
         await ctx.send(f"✅ ลบข้อความ {len(deleted)} ข้อความ")
         await log_message(f"🗑️ ลบข้อความ {len(deleted)} ข้อความโดย {ctx.author} ({ctx.author.id})")
 
-@bot.tree.command(name="help", description="แสดงข้อมูลการใช้งานคำสั่งต่างๆ ของบอท")
-async def help_command(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="📄 คำสั่งการใช้งานบอท",
-        description="คำสั่งต่างๆ ที่สามารถใช้ได้กับบอทนี้",
-        color=discord.Color.green()
-    )
-    embed.add_field(name="/ping", value="ตรวจสอบว่าบอทยังออนไลน์อยู่", inline=False)
-    embed.add_field(name="/setup", value="ตั้งค่าระบบส่งข้อความนิรนาม (เฉพาะผู้ดูแลระบบ)", inline=False)
-    embed.add_field(name="/update", value="รีสตาร์ทบอท (เฉพาะผู้ดูแลระบบ)", inline=False)
-    embed.add_field(name="/delete", value="ลบข้อความตามจำนวนที่กำหนด (เฉพาะผู้ดูแลระบบ)", inline=False)
-    embed.set_footer(text="พิมพ์ /help เพื่อตรวจสอบคำสั่งทั้งหมดที่สามารถใช้ได้")
-
-    await interaction.response.send_message(embed=embed, ephemeral=True)
-
 server_on()
 bot.run(TOKEN)
-
-# ปิดการเชื่อมต่อเมื่อไม่ใช้งานแล้ว
-def close_connection():
-    cur.close()
-    conn.close()
