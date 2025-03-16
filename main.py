@@ -40,11 +40,14 @@ class SelectUser(Select):
         self.content = content
 
     async def callback(self, interaction: discord.Interaction):
-        selected_users = [interaction.guild.get_member(int(user_id)) for user_id in self.values]
-        final_message = f"{self.content}\n\nส่งโดย: นิรนาม"
-        announce_channel = bot.get_channel(interaction.guild.announce_channel_id)
-        await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
-        await interaction.response.send_message(f"คุณเลือก: {', '.join([user.display_name for user in selected_users])}", ephemeral=True)
+        try:
+            selected_users = [interaction.guild.get_member(int(user_id)) for user_id in self.values]
+            final_message = f"{self.content}\n\nส่งโดย: นิรนาม"
+            announce_channel = bot.get_channel(guild_settings[interaction.guild.id]['announce_channel_id'])
+            await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
+            await interaction.response.send_message(f"คุณเลือก: {', '.join([user.display_name for user in selected_users])}", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class SelectUserView(View):
     def __init__(self, members, content, page=0):
