@@ -13,7 +13,7 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 INPUT_CHANNEL_ID = os.getenv("INPUT_CHANNEL_ID")
 ANNOUNCE_CHANNEL_ID = os.getenv("ANNOUNCE_CHANNEL_ID")
 
-if not TOKEN or not WEBHOOK_URLหรือไม่ INPUT_CHANNEL_ID หรือไม่ ANNOUNCE_CHANNEL_ID:
+if not TOKEN or not WEBHOOK_URL or not INPUT_CHANNEL_ID or not ANNOUNCE_CHANNEL_ID:
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, INPUT_CHANNEL_ID และ ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
@@ -63,7 +63,7 @@ async def on_message(message):
         for word in content.split():
             if word.startswith('@'):
                 username = word[1:]
-                member = discord.utils.get(message.guild.members, name=username) หรือ discord.utils.get(message.guild.members, display_name=username)
+                member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
                 if member:
                     mentions.append(f"@{member.display_name}")
                 else:
@@ -81,7 +81,7 @@ async def on_message(message):
             announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
             
             current_time = time.time()
-            if not getattr(bot, 'last_message_content', None) หรือ (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
+            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
                 bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
