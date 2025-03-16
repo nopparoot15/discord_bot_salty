@@ -112,24 +112,31 @@ async def setup(interaction: discord.Interaction):
 
     guild_id = interaction.guild.id
 
-    category = await interaction.guild.create_category("ข้อความนิรนาม")
-    input_channel = await category.create_text_channel("ส่งข้อความนิรนาม")
-    announce_channel = await category.create_text_channel("ประกาศข้อความนิรนาม")
+    try:
+        category = await interaction.guild.create_category("ข้อความนิรนาม")
+        input_channel = await category.create_text_channel("ส่งข้อความนิรนาม")
+        announce_channel = await category.create_text_channel("ประกาศข้อความนิรนาม")
 
-    guild_settings[guild_id] = {
-        'input_channel_id': input_channel.id,
-        'announce_channel_id': announce_channel.id
-    }
+        guild_settings[guild_id] = {
+            'input_channel_id': input_channel.id,
+            'announce_channel_id': announce_channel.id
+        }
 
-    embed = discord.Embed(
-        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
-        description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
-        color=discord.Color.blue()
-    )
+        embed = discord.Embed(
+            title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
+            description="พิมพ์ข้อความในช่องนี้เพื่อส่งข้อความแบบไม่ระบุตัวตน\nสามารถ @mention สมาชิกได้โดยพิมพ์ @username",
+            color=discord.Color.blue()
+        )
 
-    await input_channel.send(embed=embed)
-    await interaction.response.send_message("✅ ระบบ setup ถูกตั้งค่าเรียบร้อย", ephemeral=True)
-    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
+        await input_channel.send(embed=embed)
+        await interaction.response.send_message("✅ ระบบ setup ถูกตั้งค่าเรียบร้อย", ephemeral=True)
+        await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
+    except discord.errors.NotFound as e:
+        await log_message(f"❌ เกิดข้อผิดพลาดในการตั้งค่าระบบ: {e}")
+        await interaction.followup.send("❌ เกิดข้อผิดพลาดในการตั้งค่าระบบ", ephemeral=True)
+    except Exception as e:
+        await log_message(f"❌ เกิดข้อผิดพลาดที่ไม่คาดคิด: {e}")
+        await interaction.followup.send("❌ เกิดข้อผิดพลาดที่ไม่คาดคิด", ephemeral=True)
 
 @bot.command()
 async def update(ctx):
