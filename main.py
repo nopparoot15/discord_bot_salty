@@ -1,7 +1,7 @@
 import os
 import discord
-import asyncio  # เพิ่มการ import asyncio
-import requests  # เพิ่มการ import requests
+import asyncio
+import requests
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import Modal, TextInput, Button, View, Select
@@ -27,10 +27,12 @@ class MessageModal(Modal):
     async def callback(self, interaction: discord.Interaction):
         try:
             content = self.children[0].value
+            print(f"[DEBUG] Received message content: {content}")  # Debug log
             members = interaction.guild.members
             view = SelectUserView(members, content)
             await interaction.response.send_message("กรุณาเลือกผู้ใช้:", view=view, ephemeral=True)
         except Exception as e:
+            print(f"[ERROR] Error in MessageModal callback: {e}")  # Error log
             await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class SelectUser(Select):
@@ -44,9 +46,14 @@ class SelectUser(Select):
             selected_users = [interaction.guild.get_member(int(user_id)) for user_id in self.values]
             final_message = f"{self.content}\n\nส่งโดย: นิรนาม"
             announce_channel = bot.get_channel(guild_settings[interaction.guild.id]['announce_channel_id'])
-            await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
-            await interaction.response.send_message(f"คุณเลือก: {', '.join([user.display_name for user in selected_users])}", ephemeral=True)
+            print(f"[DEBUG] Announce channel: {announce_channel}")  # Debug log
+            if announce_channel:
+                await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
+                await interaction.response.send_message(f"คุณเลือก: {', '.join([user.display_name for user in selected_users])}", ephemeral=True)
+            else:
+                await interaction.response.send_message("ไม่พบช่องประกาศข้อความ", ephemeral=True)
         except Exception as e:
+            print(f"[ERROR] Error in SelectUser callback: {e}")  # Error log
             await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class SelectUserView(View):
