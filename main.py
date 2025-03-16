@@ -28,11 +28,13 @@ class MessageModal(Modal):
         try:
             content = self.children[0].value
             print(f"[DEBUG] Received message content: {content}")  # Debug log
+            await log_message(f"[DEBUG] Received message content: {content}")  # ส่ง logs ไปยัง webhook
             members = interaction.guild.members
             view = SelectUserView(members, content)
             await interaction.response.send_message("กรุณาเลือกผู้ใช้:", view=view, ephemeral=True)
         except Exception as e:
             print(f"[ERROR] Error in MessageModal callback: {e}")  # Error log
+            await log_message(f"[ERROR] Error in MessageModal callback: {e}")  # ส่ง logs ไปยัง webhook
             await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class SelectUser(Select):
@@ -44,9 +46,12 @@ class SelectUser(Select):
     async def callback(self, interaction: discord.Interaction):
         try:
             selected_users = [interaction.guild.get_member(int(user_id)) for user_id in self.values]
+            print(f"[DEBUG] Selected users: {selected_users}")  # Debug log
+            await log_message(f"[DEBUG] Selected users: {selected_users}")  # ส่ง logs ไปยัง webhook
             final_message = f"{self.content}\n\nส่งโดย: นิรนาม"
             announce_channel = bot.get_channel(guild_settings[interaction.guild.id]['announce_channel_id'])
             print(f"[DEBUG] Announce channel: {announce_channel}")  # Debug log
+            await log_message(f"[DEBUG] Announce channel: {announce_channel}")  # ส่ง logs ไปยัง webhook
             if announce_channel:
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
                 await interaction.response.send_message(f"คุณเลือก: {', '.join([user.display_name for user in selected_users])}", ephemeral=True)
@@ -54,6 +59,7 @@ class SelectUser(Select):
                 await interaction.response.send_message("ไม่พบช่องประกาศข้อความ", ephemeral=True)
         except Exception as e:
             print(f"[ERROR] Error in SelectUser callback: {e}")  # Error log
+            await log_message(f"[ERROR] Error in SelectUser callback: {e}")  # ส่ง logs ไปยัง webhook
             await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class SelectUserView(View):
@@ -124,9 +130,6 @@ async def help_command(interaction: discord.Interaction):
 
 async def log_message(content):
     print(f"[LOG] {content}")
-    asyncio.create_task(_send_webhook(content))
-
-async def _send_webhook(content):
     if WEBHOOK_URL:
         try:
             response = requests.post(WEBHOOK_URL, json={"content": content})
