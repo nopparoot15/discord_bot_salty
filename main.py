@@ -19,9 +19,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 guild_settings = {}
 
 class MessageModal(Modal):
-    def __init__(self, selected_users):
+    def __init__(self, selected_user):
         super().__init__(title="ส่งข้อความนิรนาม")
-        self.selected_users = selected_users
+        self.selected_user = selected_user
         self.add_item(TextInput(label="พิมพ์ข้อความของคุณที่นี่"))
 
     async def callback(self, interaction: discord.Interaction):
@@ -31,7 +31,7 @@ class MessageModal(Modal):
             announce_channel = bot.get_channel(guild_settings[interaction.guild.id]['announce_channel_id'])
             if announce_channel:
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
-                await interaction.response.send_message(f"ข้อความของคุณถูกส่งไปยัง: {', '.join([user.display_name for user in self.selected_users])}", ephemeral=True)
+                await interaction.response.send_message(f"ข้อความของคุณถูกส่งไปยัง: {self.selected_user.display_name}", ephemeral=True)
             else:
                 await interaction.response.send_message("ไม่พบช่องประกาศข้อความ", ephemeral=True)
         except Exception as e:
@@ -52,7 +52,10 @@ class SelectUserView(View):
         start = self.page * self.per_page
         end = start + self.per_page
         self.clear_items()
-        self.add_item(SelectUser(self.members[start:end]))
+        if len(self.members[start:end]) < 1:
+            self.add_item(SelectUser(self.members[start:end], disabled=True))
+        else:
+            self.add_item(SelectUser(self.members[start:end]))
 
     def update_buttons(self):
         if self.page > 0:
@@ -61,14 +64,17 @@ class SelectUserView(View):
             self.add_item(NextPageButton())
 
 class SelectUser(Select):
-    def __init__(self, members, placeholder="เลือกผู้ใช้ (สูงสุด 3 คน)"):
+    def __init__(self, members, placeholder="เลือกผู้ใช้ (สูงสุด 1 คน)", disabled=False):
         options = [discord.SelectOption(label=member.display_name, value=str(member.id)) for member in members]
-        super().__init__(placeholder=placeholder, min_values=1, max_values=3, options=options)
+        super().__init__(placeholder=placeholder, min_values=1, max_values=1, options=options, disabled=disabled)
 
     async def callback(self, interaction: discord.Interaction):
+        if self.disabled:
+            await interaction.response.send_message("มีจำนวนสมาชิกน้อยเกินไปที่จะเลือก", ephemeral=True)
+            return
         try:
-            selected_users = [interaction.guild.get_member(int(user_id)) for user_id in self.values]
-            modal = MessageModal(selected_users)
+            selected_user = interaction.guild.get_member(int(self.values[0]))
+            modal = MessageModal(selected_user)
             await interaction.response.send_modal(modal)
         except Exception as e:
             print(f"[ERROR] Error in SelectUser callback: {e}")
@@ -102,6 +108,9 @@ class StartMessageButton(Button):
 
     async def callback(self, interaction: discord.Interaction):
         members = interaction.guild.members
+        if len(members) < 1:
+            await interaction.response.send_message("จำนวนสมาชิกน้อยเกินไปที่จะเริ่มการส่งข้อความ", ephemeral=True)
+            return
         view = SelectUserView(members)
         await interaction.response.send_message("กรุณาเลือกผู้ใช้:", view=view, ephemeral=True)
 
