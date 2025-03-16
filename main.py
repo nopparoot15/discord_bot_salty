@@ -145,7 +145,7 @@ async def setup(interaction: discord.Interaction):
         )
 
         await input_channel.send(embed=embed)
-        await interaction.response.send_message("✅ ระบบ setup ถูกตั้งค่าเรียบร้อย", ephemeral=True)
+        await interaction.response.send_message("✅ ระบบ setup ถูกตั้งค่าเรียบร้อย\n\n(สามารถเปลี่ยนชื่อห้องและจัดเรียงตามสะดวกได้เลย)", ephemeral=True)
         await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
     except discord.errors.NotFound as e:
         await log_message(f"❌ เกิดข้อผิดพลาดในการตั้งค่าระบบ: {e}")
@@ -191,6 +191,21 @@ async def delete(ctx, count: int, *, target: str = None):
         deleted = await ctx.channel.purge(limit=count)
         await ctx.send(f"✅ ลบข้อความ {len(deleted)} ข้อความ")
         await log_message(f"🗑️ ลบข้อความ {len(deleted)} ข้อความโดย {ctx.author} ({ctx.author.id})")
+
+@bot.tree.command(name="help", description="แสดงข้อมูลการใช้งานคำสั่งต่างๆ ของบอท")
+async def help_command(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="📄 คำสั่งการใช้งานบอท",
+        description="คำสั่งต่างๆ ที่สามารถใช้ได้กับบอทนี้",
+        color=discord.Color.green()
+    )
+    embed.add_field(name="/ping", value="ตรวจสอบว่าบอทยังออนไลน์อยู่", inline=False)
+    embed.add_field(name="/setup", value="ตั้งค่าระบบส่งข้อความนิรนาม (เฉพาะผู้ดูแลระบบ)", inline=False)
+    embed.add_field(name="/update", value="รีสตาร์ทบอท (เฉพาะผู้ดูแลระบบ)", inline=False)
+    embed.add_field(name="/delete", value="ลบข้อความตามจำนวนที่กำหนด (เฉพาะผู้ดูแลระบบ)", inline=False)
+    embed.set_footer(text="พิมพ์ /help เพื่อตรวจสอบคำสั่งทั้งหมดที่สามารถใช้ได้")
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
 
 server_on()
 bot.run(TOKEN)
