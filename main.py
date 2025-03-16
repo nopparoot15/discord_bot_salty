@@ -132,6 +132,7 @@ async def log_message(content):
     print(f"[LOG] {content}")
     if WEBHOOK_URL:
         try:
+            print(f"[DEBUG] Sending log to webhook: {WEBHOOK_URL}")  # Debug log
             response = requests.post(WEBHOOK_URL, json={"content": content})
             if response.status_code != 204:
                 print(f"❌ ไม่สามารถส่ง webhook ได้: {response.status_code} - {response.text}")
