@@ -30,7 +30,7 @@ class MessageModal(Modal):
             final_message = f"{content}\n\nส่งโดย: นิรนาม"
             announce_channel = bot.get_channel(guild_settings[interaction.guild.id]['announce_channel_id'])
             if announce_channel:
-                await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
+                await announce_channel.send(f"{self.selected_user.mention}\n{final_message}", allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
                 await interaction.response.send_message(f"ข้อความของคุณถูกส่งไปยัง: {self.selected_user.display_name}", ephemeral=True)
             else:
                 await interaction.response.send_message("ไม่พบช่องประกาศข้อความ", ephemeral=True)
@@ -92,7 +92,7 @@ class PreviousPageButton(Button):
         await interaction.response.edit_message(view=view)
 
 class NextPageButton(Button):
-    def __init__(self):
+    def __init__():
         super().__init__(style=discord.ButtonStyle.primary, label="ถัดไป")
 
     async def callback(self, interaction: discord.Interaction):
