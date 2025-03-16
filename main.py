@@ -20,11 +20,10 @@ if not TOKEN or not WEBHOOK_URL or not INPUT_CHANNEL_ID or not ANNOUNCE_CHANNEL_
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-bot = commands.Bot(command_prefix="!", intents=intents)
 
-class MyBot(discord.Client):
+class MyBot(commands.Bot):
     def __init__(self):
-        super().__init__(intents=intents)
+        super().__init__(command_prefix="!", intents=intents)
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
@@ -104,6 +103,11 @@ async def on_message(message):
             await log_message(error_msg)
 
     await bot.process_commands(message)
+
+@bot.command()
+async def ping(ctx):
+    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
+    await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
