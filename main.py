@@ -12,7 +12,7 @@ from myserver import server_on
 TOKEN = os.getenv("TOKEN")
 ANNOUNCE_CHANNEL_ID = 1350128705648984197
 MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
-WEBHOOK_URL = "https://discord.com/api/webhooks/1350546611327078464/17AFMw_4NM7bvaArtO52Sl1CkThz9gJqai5V4CwJS2J0UD_H3up1nyDsheFSD93ODxbu"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 intents = discord.Intents.default()
 intents.message_content = True
