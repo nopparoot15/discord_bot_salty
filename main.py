@@ -8,6 +8,7 @@ from discord.ext import commands
 from discord import app_commands
 from myserver import server_on
 import psycopg2
+import psycopg2.extras
 
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
@@ -19,8 +20,12 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # เชื่อมต่อกับ PostgreSQL
-conn = psycopg2.connect(DATABASE_URL)
-cur = conn.cursor()
+try:
+    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+except Exception as e:
+    print(f"❌ ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้: {e}")
+    sys.exit(1)
 
 # สร้างตารางสำหรับบันทึกการตั้งค่า guild_settings
 cur.execute("""
