@@ -11,6 +11,10 @@ from myserver import server_on
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
+if not TOKEN or not WEBHOOK_URL:
+    print("❌ โปรดตั้งค่า environment variables (TOKEN และ WEBHOOK_URL)")
+    sys.exit(1)
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -117,8 +121,8 @@ async def setup(interaction: discord.Interaction):
     announce_channel = await category.create_text_channel("ประกาศข้อความนิรนาม")
 
     guild_settings[guild_id] = {
-        'input_channel_id': 1350760225136840795,
-        'announce_channel_id': 1350760229763022899
+        'input_channel_id': input_channel.id,
+        'announce_channel_id': announce_channel.id
     }
 
     embed = discord.Embed(
@@ -140,6 +144,7 @@ async def update(ctx):
     await ctx.send("🔄 กำลังอัปเดตบอท โปรดรอสักครู่...")
     await log_message("🔄 บอทกำลังรีสตาร์ทตามคำสั่งอัปเดต")
     try:
+        await bot.close()
         os._exit(0)
     except Exception as e:
         await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
