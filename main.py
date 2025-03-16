@@ -2,7 +2,7 @@ import os
 import discord
 from discord.ext import commands
 from discord import app_commands
-from discord.ui import Modal, InputText, Button, View, Select
+from discord.ui import Modal, TextInput, Button, View, Select
 
 from myserver import server_on
 
@@ -17,7 +17,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 class MessageModal(Modal):
     def __init__(self):
         super().__init__(title="ส่งข้อความนิรนาม")
-        self.add_item(InputText(label="พิมพ์ข้อความของคุณที่นี่"))
+        self.add_item(TextInput(label="พิมพ์ข้อความของคุณที่นี่"))
 
     async def callback(self, interaction: discord.Interaction):
         content = self.children[0].value
