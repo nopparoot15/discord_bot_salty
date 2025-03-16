@@ -16,6 +16,9 @@ intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# กำหนดตัวแปร guild_settings
+guild_settings = {}
+
 class MessageModal(Modal):
     def __init__(self):
         super().__init__(title="ส่งข้อความนิรนาม")
