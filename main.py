@@ -5,6 +5,7 @@ import asyncio
 import requests
 import discord
 from discord.ext import commands
+from discord import app_commands
 from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")
@@ -20,6 +21,16 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+class MyBot(discord.Client):
+    def __init__(self):
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
+
+    async def setup_hook(self):
+        await self.tree.sync()
+
+bot = MyBot()
 
 async def log_message(content):
     print(f"[LOG] {content}")
@@ -38,7 +49,6 @@ async def _send_webhook(content):
 
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
@@ -94,11 +104,6 @@ async def on_message(message):
             await log_message(error_msg)
 
     await bot.process_commands(message)
-
-@bot.command()
-async def ping(ctx):
-    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
-    await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
