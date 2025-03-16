@@ -13,7 +13,7 @@ WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 INPUT_CHANNEL_ID = os.getenv("INPUT_CHANNEL_ID")
 ANNOUNCE_CHANNEL_ID = os.getenv("ANNOUNCE_CHANNEL_ID")
 
-if not TOKEN or not WEBHOOK_URL or not INPUT_CHANNEL_ID or not ANNOUNCE_CHANNEL_ID:
+if not TOKEN or not WEBHOOK_URLหรือไม่ INPUT_CHANNEL_ID หรือไม่ ANNOUNCE_CHANNEL_ID:
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, INPUT_CHANNEL_ID และ ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
@@ -63,7 +63,7 @@ async def on_message(message):
         for word in content.split():
             if word.startswith('@'):
                 username = word[1:]
-                member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
+                member = discord.utils.get(message.guild.members, name=username) หรือ discord.utils.get(message.guild.members, display_name=username)
                 if member:
                     mentions.append(f"@{member.display_name}")
                 else:
@@ -81,7 +81,7 @@ async def on_message(message):
             announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
             
             current_time = time.time()
-            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
+            if not getattr(bot, 'last_message_content', None) หรือ (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
                 bot.last_message_content = final_message
                 bot.last_message_time = current_time
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
@@ -107,6 +107,24 @@ async def on_message(message):
 async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
     await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
+
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def delete(ctx, num: int):
+    if not ctx.author.guild_permissions.administrator:
+        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
+        return
+    
+    if num < 1:
+        await ctx.send("❌ กรุณาระบุจำนวนข้อความที่ต้องการลบที่มากกว่า 0")
+        return
+
+    try:
+        deleted = await ctx.channel.purge(limit=num + 1)  # รวมถึงคำสั่งที่พิมพ์เองด้วย
+        await ctx.send(f"✅ ลบข้อความจำนวน {len(deleted) - 1} ข้อความเรียบร้อยแล้ว", delete_after=5)
+        await log_message(f"🗑️ คำสั่ง delete ถูกใช้โดย {ctx.author} ({ctx.author.id}) ลบ {len(deleted) - 1} ข้อความ")
+    except discord.errors.Forbidden:
+        await ctx.send("❌ บอทไม่มีสิทธิ์ในการลบข้อความในช่องนี้")
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
