@@ -39,7 +39,7 @@ def home():
     </head>
     <body>
         <div class="container">
-            <h1>Bot Status</h1>
+            <h1>Salty Bot Status</h1>
             <p>Server is running!</p>
         </div>
     </body>
