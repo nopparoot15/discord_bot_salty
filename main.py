@@ -5,7 +5,6 @@ import asyncio
 import requests
 import discord
 from discord.ext import commands
-from discord import app_commands
 from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")
@@ -21,9 +20,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-
-# Dictionary to store channel IDs for each guild
-guild_settings = {}
 
 async def log_message(content):
     print(f"[LOG] {content}")
@@ -106,44 +102,28 @@ async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
     await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
 
-@bot.command()
-async def update(ctx):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
-        return
-    
-    await ctx.send("🔄 กำลังอัปเดตบอท โปรดรอสักครู่...")
-    await log_message("🔄 บอทกำลังรีสตาร์ทตามคำสั่งอัปเดต")
-    try:
-        await bot.close()
-        os._exit(0)
-    except Exception as e:
-        await ctx.send(f"❌ ไม่สามารถรีสตาร์ทบอทได้: {e}")
-        await log_message(f"❌ รีสตาร์ทบอทล้มเหลว: {e}")
-
-@bot.command()
-@commands.has_permissions(administrator=True)
-async def delete(ctx, count: int, *, target: str = None):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
+@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
+async def setup(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
+        await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
         return
 
-    if target:
-        if target.startswith('@'):
-            username = target[1:]
-            member = discord.utils.get(ctx.guild.members, name=username) or discord.utils.get(ctx.guild.members, display_name=username)
-            if member:
-                deleted = await ctx.channel.purge(limit=count, check=lambda m: m.author == member)
-                await ctx.send(f"✅ ลบข้อความ {len(deleted)} ข้อความจาก {member.display_name}")
-                await log_message(f"🗑️ ลบข้อความ {len(deleted)} ข้อความจาก {member.display_name} โดย {ctx.author} ({ctx.author.id})")
-            else:
-                await ctx.send(f"❌ ไม่พบผู้ใช้ที่ชื่อ {username}")
-        else:
-            await ctx.send("❌ กรุณาระบุชื่อผู้ใช้ที่ถูกต้อง")
-    else:
-        deleted = await ctx.channel.purge(limit=count)
-        await ctx.send(f"✅ ลบข้อความ {len(deleted)} ข้อความ")
-        await log_message(f"🗑️ ลบข้อความ {len(deleted)} ข้อความโดย {ctx.author} ({ctx.author.id})")
+    embed = discord.Embed(
+        title="📩 การตั้งค่าระบบส่งข้อความนิรนาม",
+        description=(
+            "ยินดีต้อนรับสู่ระบบส่งข้อความนิรนาม! ระบบนี้ช่วยให้คุณสามารถส่งข้อความแบบไม่ระบุตัวตนได้ เพื่อให้คุณสามารถแสดงความคิดเห็นหรือส่งข้อความถึงสมาชิกในเซิร์ฟเวอร์ได้อย่างปลอดภัย\n\n"
+            "📋 **วิธีการใช้งานห้องส่งข้อความนิรนาม**:\n"
+            "1. **พิมพ์ข้อความของคุณ**: เข้าไปที่ช่องที่กำหนดสำหรับส่งข้อความนิรนามและพิมพ์ข้อความที่คุณต้องการส่ง\n"
+            "2. **@mention สมาชิก** (ถ้าต้องการ): คุณสามารถ @mention สมาชิกได้โดยพิมพ์ @username เพื่อให้ข้อความถูกส่งถึงสมาชิกที่คุณต้องการ\n"
+            "3. **ข้อความจะถูกส่งไปยังช่องประกาศ**: ข้อความของคุณจะถูกส่งไปยังช่องประกาศโดยอัตโนมัติหลังจากที่คุณส่งข้อความในช่องที่กำหนด\n\n"
+            "📢 **โปรดทราบ**: ข้อความต้นฉบับของคุณจะถูกลบออกจากช่องที่กำหนดหลังจากที่ข้อความถูกส่งไปยังช่องประกาศเรียบร้อยแล้ว เพื่อรักษาความเป็นส่วนตัวของคุณ"
+        ),
+        color=discord.Color.blue()
+    )
+
+    await interaction.response.send_message(embed=embed, ephemeral=True)
+    await log_message(f"⚙️ คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
 
 server_on()
 bot.run(TOKEN)
