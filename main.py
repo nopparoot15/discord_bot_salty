@@ -5,7 +5,6 @@ import asyncio
 import requests
 import discord
 from discord.ext import commands
-from discord import app_commands
 from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")
@@ -21,7 +20,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
-tree = app_commands.CommandTree(bot)
 
 async def log_message(content):
     print(f"[LOG] {content}")
@@ -40,7 +38,7 @@ async def _send_webhook(content):
 
 @bot.event
 async def on_ready():
-    await tree.sync()
+    await bot.tree.sync()
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
@@ -102,7 +100,7 @@ async def ping(ctx):
     await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
     await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
 
-@tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
+@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
