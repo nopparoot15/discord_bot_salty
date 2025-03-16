@@ -4,6 +4,7 @@ import time
 import asyncio
 import requests
 import discord
+import json
 from discord.ext import commands
 from discord import app_commands
 from myserver import server_on
@@ -18,6 +19,18 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Dictionary to store channel IDs for each guild
 guild_settings = {}
+
+def save_guild_settings():
+    with open('guild_settings.json', 'w') as f:
+        json.dump(guild_settings, f)
+
+def load_guild_settings():
+    global guild_settings
+    try:
+        with open('guild_settings.json', 'r') as f:
+            guild_settings = json.load(f)
+    except FileNotFoundError:
+        guild_settings = {}
 
 async def log_message(content):
     print(f"[LOG] {content}")
@@ -36,6 +49,7 @@ async def _send_webhook(content):
 
 @bot.event
 async def on_ready():
+    load_guild_settings()
     if not getattr(bot, 'synced', False):
         await bot.tree.sync()
         bot.synced = True
@@ -121,6 +135,8 @@ async def setup(interaction: discord.Interaction):
             'input_channel_id': input_channel.id,
             'announce_channel_id': announce_channel.id
         }
+
+        save_guild_settings()  # บันทึกการตั้งค่า
 
         embed = discord.Embed(
             title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
