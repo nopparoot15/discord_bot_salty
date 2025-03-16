@@ -3,7 +3,6 @@ import discord
 import asyncio
 import requests
 from discord.ext import commands
-from discord import app_commands
 from discord.ui import Modal, TextInput, Button, View, Select
 
 from myserver import server_on
@@ -20,56 +19,32 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 guild_settings = {}
 
 class MessageModal(Modal):
-    def __init__(self):
+    def __init__(self, selected_users):
         super().__init__(title="ส่งข้อความนิรนาม")
+        self.selected_users = selected_users
         self.add_item(TextInput(label="พิมพ์ข้อความของคุณที่นี่"))
 
     async def callback(self, interaction: discord.Interaction):
         try:
             content = self.children[0].value
-            print(f"[DEBUG] Received message content: {content}")  # Debug log
-            await log_message(f"[DEBUG] Received message content: {content}")  # ส่ง logs ไปยัง webhook
-            members = interaction.guild.members
-            view = SelectUserView(members, content)
-            await interaction.response.send_message("กรุณาเลือกผู้ใช้:", view=view, ephemeral=True)
-        except Exception as e:
-            print(f"[ERROR] Error in MessageModal callback: {e}")  # Error log
-            await log_message(f"[ERROR] Error in MessageModal callback: {e}")  # ส่ง logs ไปยัง webhook
-            await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
-
-class SelectUser(Select):
-    def __init__(self, members, content, placeholder="เลือกผู้ใช้ (สูงสุด 3 คน)"):
-        options = [discord.SelectOption(label=member.display_name, value=str(member.id)) for member in members]
-        super().__init__(placeholder=placeholder, min_values=1, max_values=3, options=options)
-        self.content = content
-
-    async def callback(self, interaction: discord.Interaction):
-        try:
-            selected_users = [interaction.guild.get_member(int(user_id)) for user_id in self.values]
-            print(f"[DEBUG] Selected users: {selected_users}")  # Debug log
-            await log_message(f"[DEBUG] Selected users: {selected_users}")  # ส่ง logs ไปยัง webhook
-            final_message = f"{self.content}\n\nส่งโดย: นิรนาม"
+            final_message = f"{content}\n\nส่งโดย: นิรนาม"
             announce_channel = bot.get_channel(guild_settings[interaction.guild.id]['announce_channel_id'])
-            print(f"[DEBUG] Announce channel: {announce_channel}")  # Debug log
-            await log_message(f"[DEBUG] Announce channel: {announce_channel}")  # ส่ง logs ไปยัง webhook
             if announce_channel:
                 await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
-                await interaction.response.send_message(f"คุณเลือก: {', '.join([user.display_name for user in selected_users])}", ephemeral=True)
+                await interaction.response.send_message(f"ข้อความของคุณถูกส่งไปยัง: {', '.join([user.display_name for user in self.selected_users])}", ephemeral=True)
             else:
                 await interaction.response.send_message("ไม่พบช่องประกาศข้อความ", ephemeral=True)
         except Exception as e:
-            print(f"[ERROR] Error in SelectUser callback: {e}")  # Error log
-            await log_message(f"[ERROR] Error in SelectUser callback: {e}")  # ส่ง logs ไปยัง webhook
+            print(f"[ERROR] Error in MessageModal callback: {e}")
             await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class SelectUserView(View):
-    def __init__(self, members, content, page=0):
+    def __init__(self, members, page=0):
         super().__init__()
         self.page = page
         self.members = members
         self.per_page = 25
         self.max_pages = (len(members) - 1) // self.per_page + 1
-        self.content = content
         self.update_select_menu()
         self.update_buttons()
 
@@ -77,13 +52,27 @@ class SelectUserView(View):
         start = self.page * self.per_page
         end = start + self.per_page
         self.clear_items()
-        self.add_item(SelectUser(self.members[start:end], self.content))
+        self.add_item(SelectUser(self.members[start:end]))
 
     def update_buttons(self):
         if self.page > 0:
             self.add_item(PreviousPageButton())
         if self.page < self.max_pages - 1:
             self.add_item(NextPageButton())
+
+class SelectUser(Select):
+    def __init__(self, members, placeholder="เลือกผู้ใช้ (สูงสุด 3 คน)"):
+        options = [discord.SelectOption(label=member.display_name, value=str(member.id)) for member in members]
+        super().__init__(placeholder=placeholder, min_values=1, max_values=3, options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            selected_users = [interaction.guild.get_member(int(user_id)) for user_id in self.values]
+            modal = MessageModal(selected_users)
+            await interaction.response.send_modal(modal)
+        except Exception as e:
+            print(f"[ERROR] Error in SelectUser callback: {e}")
+            await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class PreviousPageButton(Button):
     def __init__(self):
@@ -112,8 +101,9 @@ class StartMessageButton(Button):
         super().__init__(style=discord.ButtonStyle.primary, label="เริ่มการส่งข้อความ")
 
     async def callback(self, interaction: discord.Interaction):
-        modal = MessageModal()
-        await interaction.response.send_modal(modal)
+        members = interaction.guild.members
+        view = SelectUserView(members)
+        await interaction.response.send_message("กรุณาเลือกผู้ใช้:", view=view, ephemeral=True)
 
 @bot.tree.command(name="help", description="แสดงวิธีใช้บอทสำหรับบุคคลทั่วไป")
 async def help_command(interaction: discord.Interaction):
@@ -132,7 +122,7 @@ async def log_message(content):
     print(f"[LOG] {content}")
     if WEBHOOK_URL:
         try:
-            print(f"[DEBUG] Sending log to webhook: {WEBHOOK_URL}")  # Debug log
+            print(f"[DEBUG] Sending log to webhook: {WEBHOOK_URL}")
             response = requests.post(WEBHOOK_URL, json={"content": content})
             if response.status_code != 204:
                 print(f"❌ ไม่สามารถส่ง webhook ได้: {response.status_code} - {response.text}")
