@@ -25,10 +25,13 @@ class MessageModal(Modal):
         self.add_item(TextInput(label="พิมพ์ข้อความของคุณที่นี่"))
 
     async def callback(self, interaction: discord.Interaction):
-        content = self.children[0].value
-        members = interaction.guild.members
-        view = SelectUserView(members, content)
-        await interaction.response.send_message("กรุณาเลือกผู้ใช้:", view=view, ephemeral=True)
+        try:
+            content = self.children[0].value
+            members = interaction.guild.members
+            view = SelectUserView(members, content)
+            await interaction.response.send_message("กรุณาเลือกผู้ใช้:", view=view, ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"เกิดข้อผิดพลาด: {e}", ephemeral=True)
 
 class SelectUser(Select):
     def __init__(self, members, content, placeholder="เลือกผู้ใช้ (สูงสุด 3 คน)"):
