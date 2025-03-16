@@ -1,5 +1,6 @@
 import os
 import discord
+import asyncio  # เพิ่มการ import asyncio
 from discord.ext import commands
 from discord import app_commands
 from discord.ui import Modal, TextInput, Button, View, Select
