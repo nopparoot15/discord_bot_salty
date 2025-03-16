@@ -3,21 +3,21 @@ import sys
 import time
 import asyncio
 import requests
-
 import discord
 from discord.ext import commands
-
+from discord import app_commands
 from myserver import server_on
 
 TOKEN = os.getenv("TOKEN")
-ANNOUNCE_CHANNEL_ID = 1350128705648984197
-MESSAGE_INPUT_CHANNEL_ID = 1350161594985746567
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# Dictionary to store channel IDs for each guild
+guild_settings = {}
 
 async def log_message(content):
     print(f"[LOG] {content}")
@@ -47,51 +47,54 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    if message.channel.id == MESSAGE_INPUT_CHANNEL_ID:
-        content = message.content
-        mentions = []
-        remaining_words = []
+    guild_id = message.guild.id
+    if guild_id in guild_settings:
+        settings = guild_settings[guild_id]
+        if message.channel.id == settings['input_channel_id']:
+            content = message.content
+            mentions = []
+            remaining_words = []
 
-        for word in content.split():
-            if word.startswith('@'):
-                username = word[1:]
-                member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
-                if member:
-                    mentions.append(f"@{member.display_name}")
+            for word in content.split():
+                if word.startswith('@'):
+                    username = word[1:]
+                    member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
+                    if member:
+                        mentions.append(f"@{member.display_name}")
+                    else:
+                        remaining_words.append(word)
                 else:
                     remaining_words.append(word)
-            else:
-                remaining_words.append(word)
 
-        mention_text = " ".join(mentions)
-        final_message = " ".join(remaining_words)
+            mention_text = " ".join(mentions)
+            final_message = " ".join(remaining_words)
 
-        if mentions and final_message.strip():
-            final_message = f"{mention_text}\n{final_message}"
+            if mentions and final_message.strip():
+                final_message = f"{mention_text}\n{final_message}"
 
-        try:
-            announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
-            
-            current_time = time.time()
-            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
-                bot.last_message_content = final_message
-                bot.last_message_time = current_time
-                await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
-
-            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
-            if mentions:
-                log_entry += f" | Mentions: {', '.join(mentions)}"
-            await log_message(log_entry)
-            
             try:
-                await message.delete()
-            except discord.errors.Forbidden:
-                print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
+                announce_channel = await bot.fetch_channel(settings['announce_channel_id'])
+                
+                current_time = time.time()
+                if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
+                    bot.last_message_content = final_message
+                    bot.last_message_time = current_time
+                    await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
 
-        except (discord.errors.NotFound, discord.errors.Forbidden) as e:
-            error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
-            print(error_msg)
-            await log_message(error_msg)
+                log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
+                if mentions:
+                    log_entry += f" | Mentions: {', '.join(mentions)}"
+                await log_message(log_entry)
+                
+                try:
+                    await message.delete()
+                except discord.errors.Forbidden:
+                    print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
+
+            except (discord.errors.NotFound, discord.errors.Forbidden) as e:
+                error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
+                print(error_msg)
+                await log_message(error_msg)
 
     await bot.process_commands(message)
 
@@ -102,14 +105,21 @@ async def ping(ctx):
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
-    async for message in interaction.channel.history(limit=10):
-        if message.author == bot.user and message.embeds:
-            await interaction.response.send_message("⚠️ ระบบได้ถูกตั้งค่าไว้แล้ว", ephemeral=True)
-            return
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
         await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
         return
+
+    guild_id = interaction.guild.id
+
+    category = await interaction.guild.create_category("ข้อความนิรนาม")
+    input_channel = await category.create_text_channel("ส่งข้อความนิรนาม")
+    announce_channel = await category.create_text_channel("ประกาศข้อความนิรนาม")
+
+    guild_settings[guild_id] = {
+        'input_channel_id': input_channel.id,
+        'announce_channel_id': announce_channel.id
+    }
 
     embed = discord.Embed(
         title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
@@ -117,8 +127,9 @@ async def setup(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
 
-    await interaction.channel.send(embed=embed)
-    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในช่อง: {interaction.channel.name}")
+    await input_channel.send(embed=embed)
+    await interaction.response.send_message("✅ ระบบ setup ถูกตั้งค่าเรียบร้อย", ephemeral=True)
+    await log_message(f"⚙️ ระบบ setup ถูกตั้งค่าในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
 
 @bot.command()
 async def update(ctx):
