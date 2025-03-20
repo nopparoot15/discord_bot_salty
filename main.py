@@ -91,7 +91,8 @@ async def setup(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
     
-    await interaction.response.send_message(embed=embed, view=SetupView(), ephemeral=True)
+    channel = interaction.channel
+    await channel.send(embed=embed, view=SetupView())
     await log_message(f"⚙️ คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
 
 bot.run(TOKEN)
