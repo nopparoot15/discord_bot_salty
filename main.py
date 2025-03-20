@@ -6,15 +6,14 @@ import requests
 import discord
 from discord.ext import commands
 from discord import app_commands
-from myserver import server_on
+from discord.ui import View, Button, Modal, TextInput
 
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-INPUT_CHANNEL_ID = os.getenv("INPUT_CHANNEL_ID")
 ANNOUNCE_CHANNEL_ID = os.getenv("ANNOUNCE_CHANNEL_ID")
 
-if not TOKEN or not WEBHOOK_URL or not INPUT_CHANNEL_ID or not ANNOUNCE_CHANNEL_ID:
-    print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, INPUT_CHANNEL_ID และ ANNOUNCE_CHANNEL_ID)")
+if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
+    print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
 intents = discord.Intents.default()
@@ -50,81 +49,34 @@ async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
+class AnonymousMessageModal(Modal, title="ส่งข้อความนิรนาม"):
+    message = TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
+    user_id = TextInput(label="User ID (ถ้ามี)", required=False)
 
-    if message.channel.id == int(INPUT_CHANNEL_ID):
-        content = message.content
-        mentions = []
-        remaining_words = []
-
-        for word in content.split():
-            if word.startswith('@'):
-                username = word[1:]
-                member = discord.utils.get(message.guild.members, name=username) or discord.utils.get(message.guild.members, display_name=username)
-                if member:
-                    mentions.append(f"@{member.display_name}")
-                else:
-                    remaining_words.append(word)
-            else:
-                remaining_words.append(word)
-
-        mention_text = " ".join(mentions)
-        final_message = " ".join(remaining_words)
-
-        if mentions and final_message.strip():
-            final_message = f"{mention_text}\n{final_message}"
-
-        try:
-            announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
-            
-            current_time = time.time()
-            if not getattr(bot, 'last_message_content', None) or (bot.last_message_content != final_message and current_time - getattr(bot, 'last_message_time', 0) > 2):
-                bot.last_message_content = final_message
-                bot.last_message_time = current_time
-                await announce_channel.send(final_message, allowed_mentions=discord.AllowedMentions(users=True, roles=True, everyone=False))
-
-            log_entry = f"📩 ข้อความถูกส่งโดย {message.author} ({message.author.id}) : {content}"
-            if mentions:
-                log_entry += f" | Mentions: {', '.join(mentions)}"
-            await log_message(log_entry)
-            
+    async def on_submit(self, interaction: discord.Interaction):
+        announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
+        content = self.message.value
+        user_id = self.user_id.value.strip()
+        
+        if user_id:
             try:
-                await message.delete()
-            except discord.errors.Forbidden:
-                print("❌ บอทไม่มีสิทธิ์ลบข้อความในห้องนี้")
+                mention_user = f"<@{int(user_id)}>"
+                content = f"{mention_user}\n{content}"
+            except ValueError:
+                await interaction.response.send_message("❌ User ID ไม่ถูกต้อง", ephemeral=True)
+                return
+        
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+        await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=True)
+        await log_message(f"📩 ข้อความถูกส่งไปยังห้องประกาศโดย {interaction.user} ({interaction.user.id}): {self.message.value}")
 
-        except (discord.errors.NotFound, discord.errors.Forbidden) as e:
-            error_msg = f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {str(e)}"
-            print(error_msg)
-            await log_message(error_msg)
+class SetupView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    await bot.process_commands(message)
-
-@bot.command()
-async def ping(ctx):
-    await ctx.send('🏓 Pong! บอทยังออนไลน์อยู่!')
-    await log_message(f"🏓 Pong! มีการใช้คำสั่ง ping โดย {ctx.author} ({ctx.author.id})")
-
-@bot.command()
-@commands.has_permissions(manage_messages=True)
-async def delete(ctx, num: int):
-    if not ctx.author.guild_permissions.administrator:
-        await ctx.send("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้")
-        return
-    
-    if num < 1:
-        await ctx.send("❌ กรุณาระบุจำนวนข้อความที่ต้องการลบที่มากกว่า 0")
-        return
-
-    try:
-        deleted = await ctx.channel.purge(limit=num + 1)  # รวมถึงคำสั่งที่พิมพ์เองด้วย
-        await ctx.send(f"✅ ลบข้อความจำนวน {len(deleted) - 1} ข้อความเรียบร้อยแล้ว", delete_after=5)
-        await log_message(f"🗑️ คำสั่ง delete ถูกใช้โดย {ctx.author} ({ctx.author.id}) ลบ {len(deleted) - 1} ข้อความ")
-    except discord.errors.Forbidden:
-        await ctx.send("❌ บอทไม่มีสิทธิ์ในการลบข้อความในช่องนี้")
+    @discord.ui.button(label="📩 เปิดเมนูส่งข้อความ", style=discord.ButtonStyle.primary)
+    async def open_modal(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.send_modal(AnonymousMessageModal())
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความนิรนาม")
 async def setup(interaction: discord.Interaction):
@@ -134,20 +86,12 @@ async def setup(interaction: discord.Interaction):
         return
 
     embed = discord.Embed(
-        title="📩 การตั้งค่าระบบส่งข้อความนิรนาม",
-        description=(
-            "ยินดีต้อนรับสู่ระบบส่งข้อความนิรนาม! ระบบนี้ช่วยให้คุณสามารถส่งข้อความแบบไม่ระบุตัวตนได้ เพื่อให้คุณสามารถแสดงความคิดเห็นหรือส่งข้อความถึงสมาชิกในเซิร์ฟเวอร์ได้อย่างปลอดภัย\n\n"
-            "📋 **วิธีการใช้งานห้องส่งข้อความนิรนาม**:\n"
-            "1. **พิมพ์ข้อความของคุณ**: เข้าไปที่ช่องที่กำหนดสำหรับส่งข้อความนิรนามและพิมพ์ข้อความที่คุณต้องการส่ง\n"
-            "2. **@mention สมาชิก** (ถ้าต้องการ): คุณสามารถ @mention สมาชิกได้โดยพิมพ์ @username เพื่อให้ข้อความถูกส่งถึงสมาชิกที่คุณต้องการ\n"
-            "3. **ข้อความจะถูกส่งไปยังช่องประกาศ**: ข้อความของคุณจะถูกส่งไปยังช่องประกาศโดยอัตโนมัติหลังจากที่คุณส่งข้อความในช่องที่กำหนด\n\n"
-            "📢 **โปรดทราบ**: ข้อความต้นฉบับของคุณจะถูกลบออกจากช่องที่กำหนดหลังจากที่ข้อความถูกส่งไปยังช่องประกาศเรียบร้อยแล้ว เพื่อรักษาความเป็นส่วนตัวของคุณ"
-        ),
+        title="📩 ระบบส่งข้อความนิรนาม",
+        description="กดปุ่มด้านล่างเพื่อเปิดเมนูส่งข้อความนิรนาม พร้อมตัวเลือกแท็กผู้ใช้",
         color=discord.Color.blue()
     )
-
-    await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+    await interaction.response.send_message(embed=embed, view=SetupView(), ephemeral=True)
     await log_message(f"⚙️ คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
 
-server_on()
 bot.run(TOKEN)
