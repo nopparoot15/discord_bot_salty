@@ -51,7 +51,10 @@ async def on_ready():
 
 class AnonymousMessageModal(Modal, title="ส่งข้อความนิรนาม"):
     message = TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
-    user_id = TextInput(label="User ID (ถ้ามี)", required=False)
+    user_id = TextInput(
+        label="User ID (ถ้ามี)", 
+        placeholder="เว้นว่างไว้ถ้าไม่มี\nตัวอย่าง user_id = 257693369604505600", 
+        required=False
 
     async def on_submit(self, interaction: discord.Interaction):
         announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
@@ -86,8 +89,8 @@ async def setup(interaction: discord.Interaction):
         return
 
     embed = discord.Embed(
-        title="📩 ระบบส่งข้อความนิรนาม",
-        description="กดปุ่มด้านล่างเพื่อเปิดเมนูส่งข้อความนิรนาม พร้อมตัวเลือกแท็กผู้ใช้",
+        title="📩 ให้พรี่โตส่งข้อความแทนคุณ",
+        description="กดปุ่มด้านล่างเพื่อเปิดเมนูส่งข้อความ\nหากใส่ user_id ผิดจะไม่สามารถส่งได้\nสามารถเว้นว่างได้หากไม่มี user_id",
         color=discord.Color.blue()
     )
     
