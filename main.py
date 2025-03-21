@@ -92,4 +92,28 @@ async def setup(interaction: discord.Interaction):
     await channel.send(embed=embed, view=SetupView())
     await log_message(f"⚙️ คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
 
+@bot.command(name="delete")
+@commands.has_permissions(administrator=True)
+async def delete_messages(ctx, amount: int):
+    if amount < 1:
+        await ctx.send("❌ กรุณาระบุจำนวนข้อความที่ต้องการลบมากกว่า 0")
+        return
+
+    # ลบจำนวนที่ระบุ + ข้อความคำสั่งเอง
+    deleted = await ctx.channel.purge(limit=amount + 1)
+
+    # ส่งข้อความยืนยันชั่วคราว
+    confirm_msg = await ctx.send(f"✅ ลบข้อความจำนวน {len(deleted) - 1} ข้อความใน <#{ctx.channel.id}> เรียบร้อย")
+    
+    # log ผ่าน webhook
+    await log_message(
+        f"🗑️ ผู้ดูแล {ctx.author} ({ctx.author.id}) ลบข้อความ {len(deleted) - 1} ข้อความ "
+        f"ในห้อง {ctx.channel.name} (ID: {ctx.channel.id})"
+    )
+
+    # ลบข้อความยืนยันภายใน 5 วินาที
+    await asyncio.sleep(5)
+    await confirm_msg.delete()
+
+
 bot.run(TOKEN)
