@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import asyncio
+import aiohttp
 import requests
 import discord
 from discord.ext import commands
@@ -34,15 +35,11 @@ async def log_message(content):
     asyncio.create_task(_send_webhook(content))
 
 async def _send_webhook(content):
-    if WEBHOOK_URL:
-        try:
-            response = requests.post(WEBHOOK_URL, json={"content": content})
-            if response.status_code != 204:
-                print(f"❌ ไม่สามารถส่ง webhook ได้: {response.status_code} - {response.text}")
-        except Exception as e:
-            print(f"❌ เกิดข้อผิดพลาดในการส่ง webhook: {e}")
-    else:
-        print("❌ ไม่พบ URL ของ webhook")
+    async with aiohttp.ClientSession() as session:
+        async with session.post(WEBHOOK_URL, json={"content": content}) as response:
+            if response.status != 204:
+                print(f"❌ ไม่สามารถส่ง webhook ได้: {response.status} - {await response.text()}")
+
 
 @bot.event
 async def on_ready():
