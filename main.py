@@ -130,6 +130,7 @@ class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความลับ")
 async def setup(interaction: discord.Interaction):
+    print(f"[DEBUG] /setup called by {interaction.user} ({interaction.user.id})")
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
         await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
@@ -148,6 +149,7 @@ async def setup(interaction: discord.Interaction):
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
+    await bot.tree.sync()
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
 bot.run(TOKEN)
