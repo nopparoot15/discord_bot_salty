@@ -28,11 +28,15 @@ class NameInputModal(Modal):
             await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
 
-        await interaction.response.send_message(
+        response_message = await interaction.response.send_message(
             "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
             view=UserSelect(matched),
             ephemeral=True
         )
+
+        # แก้ไขข้อความให้ว่างหลังจากเวลาที่กำหนด
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        await response_message.edit(content=' ', components=[], embeds=[])
 
 
 class SetupView(View):
@@ -94,13 +98,8 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
         await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
 
-        # ลบข้อความ follow-up หลังจากเวลาที่กำหนด
-        try:
-            await followup.delete()
-        except discord.NotFound:
-            print("⚠️ ข้อความ follow-up ถูกลบไปแล้ว")
-        except Exception as e:
-            print(f"❌ ลบข้อความ follow-up ไม่สำเร็จ: {e}")
+        # แก้ไขข้อความ follow-up ให้เป็นว่างหลังจากเวลาที่กำหนด
+        await followup.edit(content=' ', components=[], embeds=[])
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
@@ -120,13 +119,8 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
             return
         await send_anon_message(interaction, self.user_id, message_body)
         
-        # ลบข้อความ "🔍 เจอชื่อคล้ายกันหลายคนเลย~" หลังจากกดปุ่มส่งข้อความ
-        try:
-            await interaction.message.delete()
-        except discord.NotFound:
-            print("⚠️ ข้อความถูกลบไปแล้ว")
-        except Exception as e:
-            print(f"❌ ลบข้อความไม่สำเร็จ: {e}")
+        # แก้ไขข้อความ "🔍 เจอชื่อคล้ายกันหลายคนเลย~" ให้เป็นว่างหลังจากกดปุ่มส่งข้อความ
+        await interaction.message.edit(content=' ', components=[], embeds=[])
 
 
 class UserSelect(View):
