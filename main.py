@@ -48,7 +48,7 @@ class SetupView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="📩 ส่งข้อความลับเลย!", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="📩 ส่งข้อความลับเลย!", style=discord.ButtonStyle.primary, custom_id="send_secret_btn")
     async def send_secret_message(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(NameInputModal())
 
