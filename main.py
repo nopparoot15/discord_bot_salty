@@ -49,7 +49,7 @@ TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 ANNOUNCE_CHANNEL_ID = int(os.getenv("ANNOUNCE_CHANNEL_ID"))
 
-if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
+if not TOKEN or not WEBHOOK_URLหรือ ANNOUNCE_CHANNEL_ID:
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
@@ -69,9 +69,9 @@ class MyBot(commands.Bot):
     async def setup_hook(self):
         await self.tree.sync()
 
-    async def log_message(self, sender, recipient, message_body):
-        # ⛔ ห้าม log ถ้าผู้ส่งหรือผู้รับคือชื่อ bot log เอง (กันลูป)
-        if sender == "พรี่โต_log" or recipient == "นรินาม-logs":
+    async def log_message(self, sender_user: discord.abc.User, recipient: str, message_body: str):
+        sender_name = sender_user.display_name
+        if sender_name == "พรี่โต_log" or recipient == "นรินาม-logs":
             return
 
         if self._is_logging:
@@ -86,10 +86,20 @@ class MyBot(commands.Bot):
             # ตรวจสอบจำนวน log ในช่วงเวลาที่กำหนด
             if len(self.log_queue) < LOG_LIMIT_COUNT:
                 webhook = discord.SyncWebhook.from_url(WEBHOOK_URL)
-                content = f"📨 {sender} ส่งข้อความถึง {recipient}: {message_body}"
-                webhook.send(content[:2000])  # ตัดข้อความให้มีความยาวไม่เกิน 2000 ตัวอักษร
+
+                # ✨ สร้าง Embed
+                embed = discord.Embed(
+                    title="📨 มีข้อความลับถูกส่ง",
+                    color=discord.Color.purple(),
+                    timestamp=now
+                )
+                embed.set_author(name=sender_name, icon_url=sender_user.display_avatar.url)
+                embed.add_field(name="🎯 ถึง", value=recipient, inline=True)
+                embed.add_field(name="💬 ข้อความ", value=message_body[:1024], inline=False)
+
+                webhook.send(embed=embed)
                 self.log_queue.append(now)
-                print(f"[LOG] {content}")
+                print(f"[LOG] {sender_name} -> {recipient}: {message_body}")
             else:
                 print("[LOG] การส่ง log ถูกจำกัดเนื่องจากมี log มากเกินไปในช่วงเวลาที่กำหนด")
         finally:
@@ -102,9 +112,11 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         user = await bot.fetch_user(user_id)
         announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
         if user and announce_channel:
-            await announce_channel.send(f"มีคนฝากบอก {user.mention} ว่า\n{message_body}")
+            await announce_channel.send(
+                f"💌 {user.mention} มีคนแอบฝากข้อความถึงคุณแบบลับ ๆ:\n>>> {message_body}"
+            )
             await interaction.response.send_message("✅ ข้อความถูกส่งประกาศเรียบร้อย", ephemeral=True)
-            await bot.log_message(interaction.user.display_name, user.display_name, message_body)
+            await bot.log_message(interaction.user, user.display_name, message_body)
         else:
             await interaction.response.send_message("❌ ผู้ใช้นี้ไม่อยู่ในเซิร์ฟเวอร์หรือไม่สามารถเข้าถึงช่องประกาศได้", ephemeral=True)
     except discord.NotFound:
@@ -151,7 +163,7 @@ async def setup(interaction: discord.Interaction):
     print(f"[DEBUG] /setup called by {interaction.user} ({interaction.user.id})")
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
-        await bot.log_message(interaction.user.display_name, "ระบบ", "พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
+        await bot.log_message(interaction.user, "ระบบ", "พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
         return
 
     embed = discord.Embed(
@@ -161,24 +173,12 @@ async def setup(interaction: discord.Interaction):
     )
 
     await interaction.channel.send(embed=embed, view=SetupView())
-    await bot.log_message(interaction.user.display_name, "ระบบ", f"คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name}")
+    await bot.log_message(interaction.user, "ระบบ", f"คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name}")
 
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await bot.tree.sync()
-    await bot.log_message("ระบบ", "ระบบ", "บอทเริ่มทำงานเรียบร้อย")
-
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return
-
-    # ✅ ข้ามถ้าเป็นข้อความจาก channel log
-    if message.channel.id == ANNOUNCE_CHANNEL_ID:
-        return
-
-    await bot.log_message(message.author.display_name, message.channel.name, message.content)
-    await bot.process_commands(message)
+    await bot.log_message(bot.user, "ระบบ", "บอทเริ่มทำงานเรียบร้อย")
 
 bot.run(TOKEN)
