@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -9,6 +8,18 @@ from discord.ext import commands
 from discord import app_commands
 from discord.ui import View, Button, Modal, TextInput, Select
 from math import ceil
+
+
+class SetupView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="📩 ส่งข้อความลับ", style=discord.ButtonStyle.primary)
+    async def send_secret_message(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.send_modal(NameInputModal())
+
+
+
 
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
@@ -126,8 +137,6 @@ class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก
             return
 
         await interaction.response.send_modal(AnonymousMessageModal(user_id=matched[0].id))
-
-
 
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความลับ")
