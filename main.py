@@ -188,9 +188,7 @@ async def delete_messages(ctx, amount: int):
     await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
     await confirm_msg.delete()
 
-@bot.tree.command(name="send_anon", description="ส่งข้อความนิรนามถึงสมาชิกที่เลือก")
-@app_commands.describe(user="เลือกผู้ใช้ที่ต้องการส่งข้อความถึง")
-@app_commands.autocomplete(user=user_autocomplete)
+
 async def user_autocomplete(interaction: discord.Interaction, current: str):
     return [
         app_commands.Choice(name=member.display_name, value=str(member.id))
@@ -198,6 +196,10 @@ async def user_autocomplete(interaction: discord.Interaction, current: str):
         if not member.bot and current.lower() in member.display_name.lower()
     ][:25]
 
+
+@bot.tree.command(name="send_anon", description="ส่งข้อความนิรนามถึงสมาชิกที่เลือก")
+@app_commands.describe(user="เลือกผู้ใช้ที่ต้องการส่งข้อความถึง")
+@app_commands.autocomplete(user=user_autocomplete)
 async def send_anon(interaction: discord.Interaction, user: str):
     await interaction.response.send_modal(AnonymousMessageModal(int(user)))
 
