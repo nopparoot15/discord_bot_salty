@@ -96,14 +96,15 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         )
 
         await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
+
         await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
 
         try:
             await followup.delete()
         except discord.NotFound:
-            print("⚠️ ข้อความ followup ถูกลบไปแล้ว")
+            print("⚠️ ข้อความ follow-up ถูกลบไปแล้ว")
         except Exception as e:
-            print(f"❌ ลบข้อความไม่สำเร็จ: {e}")
+            print(f"❌ ลบข้อความ follow-up ไม่สำเร็จ: {e}")
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
