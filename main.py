@@ -21,6 +21,9 @@ if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
+AUTODELETE_CONFIRM_AFTER = 5  # วินาทีก่อนลบข้อความยืนยัน
+
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -49,8 +52,49 @@ async def _send_webhook(content):
 
 
 
+    
     async def on_submit(self, interaction: discord.Interaction):
+        """เมื่อผู้ใช้ยืนยันการส่งข้อความ"""
         announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
+        mention_user = f"<@{self.user_id}>"
+        content = f"{mention_user}
+{self.message.value}"
+
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+
+        # ส่งข้อความยืนยัน และแจ้งล่วงหน้าว่าจะลบในไม่กี่วินาที
+        await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
+        await interaction.followup.send(
+            f"✅ ข้อความถูกส่งเรียบร้อย! (จะลบใน {AUTODELETE_CONFIRM_AFTER} วินาที)",
+            ephemeral=True
+        )
+
+        await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {self.message.value}")
+
+        # รอลบข้อความยืนยันหลัง countdown
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        try:
+            msg = await interaction.original_response()
+            await msg.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความยืนยันถูกลบไปก่อนแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
+            mention_user = f"<@{self.user_id}>"
+        content = f"{mention_user}
+{self.message.value}"
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+
+        confirm_msg = await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
+        followup = await interaction.followup.send("✅ ข้อความถูกส่งเรียบร้อย! (จะลบใน 5 วินาที)", ephemeral=True)
+        await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {self.message.value}")
+
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        try:
+            msg = await interaction.original_response()
+            await msg.delete()
+        except Exception as e:
+            print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
         content = self.message.value
         user_id = self.user_id.value.strip()
         
@@ -104,6 +148,8 @@ class PaginatedMemberDropdown(View):
 
     async def select_user(self, interaction: discord.Interaction):
         selected_id = int(self.dropdown.values[0])
+        await interaction.message.delete()  # ลบ dropdown หลังจากเลือก
+        await interaction.response.send_modal(AnonymousMessageModal(selected_id))
         await interaction.response.send_modal(AnonymousMessageModal(selected_id))
 
     @discord.ui.button(label="⬅️ ย้อนกลับ", style=discord.ButtonStyle.secondary, row=1)
@@ -127,8 +173,49 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         self.message = TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
         self.add_item(self.message)
 
+    
     async def on_submit(self, interaction: discord.Interaction):
+        """เมื่อผู้ใช้ยืนยันการส่งข้อความ"""
         announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
+        mention_user = f"<@{self.user_id}>"
+        content = f"{mention_user}
+{self.message.value}"
+
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+
+        # ส่งข้อความยืนยัน และแจ้งล่วงหน้าว่าจะลบในไม่กี่วินาที
+        await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
+        await interaction.followup.send(
+            f"✅ ข้อความถูกส่งเรียบร้อย! (จะลบใน {AUTODELETE_CONFIRM_AFTER} วินาที)",
+            ephemeral=True
+        )
+
+        await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {self.message.value}")
+
+        # รอลบข้อความยืนยันหลัง countdown
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        try:
+            msg = await interaction.original_response()
+            await msg.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความยืนยันถูกลบไปก่อนแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
+            mention_user = f"<@{self.user_id}>"
+        content = f"{mention_user}
+{self.message.value}"
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+
+        confirm_msg = await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
+        followup = await interaction.followup.send("✅ ข้อความถูกส่งเรียบร้อย! (จะลบใน 5 วินาที)", ephemeral=True)
+        await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {self.message.value}")
+
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        try:
+            msg = await interaction.original_response()
+            await msg.delete()
+        except Exception as e:
+            print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
         mention_user = f"<@{self.user_id}>"
         content = f"{mention_user}\n{self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
@@ -179,7 +266,7 @@ async def delete_messages(ctx, amount: int):
     )
 
     # ลบข้อความยืนยันภายใน 5 วินาที
-    await asyncio.sleep(5)
+    await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
     await confirm_msg.delete()
 
 
