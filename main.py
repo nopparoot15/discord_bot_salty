@@ -1,9 +1,10 @@
 import os
 import sys
-import aiohttp
 import discord
 from discord.ext import commands
 from discord.ui import View, Button, Modal, TextInput, Select
+from datetime import datetime, timedelta
+from collections import deque
 
 class NameInputModal(Modal):
     def __init__(self):
@@ -52,7 +53,8 @@ if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
-AUTODELETE_CONFIRM_AFTER = 5
+LOG_LIMIT_PERIOD = timedelta(minutes=1)  # ระยะเวลาในการจำกัดการส่ง log
+LOG_LIMIT_COUNT = 5  # จำนวนครั้งสูงสุดในการส่ง log ในช่วงเวลาที่กำหนด
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -61,16 +63,27 @@ intents.members = True
 class MyBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
+        self.log_queue = deque()
 
     async def setup_hook(self):
         await self.tree.sync()
 
-bot = MyBot()
+    async def log_message(self, sender, recipient, message_body):
+        now = datetime.utcnow()
+        # ลบ log ที่เก่าเกินจาก queue
+        while self.log_queue and self.log_queue[0] < now - LOG_LIMIT_PERIOD:
+            self.log_queue.popleft()
+        # ตรวจสอบจำนวน log ในช่วงเวลาที่กำหนด
+        if len(self.log_queue) < LOG_LIMIT_COUNT:
+            webhook = discord.SyncWebhook.from_url(WEBHOOK_URL)
+            content = f"📨 {sender} ส่งข้อความถึง {recipient}: {message_body}"
+            webhook.send(content[:2000])  # ตัดข้อความให้มีความยาวไม่เกิน 2000 ตัวอักษร
+            self.log_queue.append(now)
+            print(f"[LOG] {content}")
+        else:
+            print("[LOG] การส่ง log ถูกจำกัดเนื่องจากมี log มากเกินไปในช่วงเวลาที่กำหนด")
 
-async def log_message(content):
-    webhook = discord.SyncWebhook.from_url(WEBHOOK_URL)
-    webhook.send(content)
-    print(f"[LOG] {content}")
+bot = MyBot()
 
 async def send_anon_message(interaction, user_id: int, message_body: str):
     user = interaction.guild.get_member(user_id)
@@ -79,7 +92,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         try:
             await announce_channel.send(f"มีคนฝากบอก {user.mention} ว่า\n{message_body}")
             await interaction.response.send_message("✅ ข้อความถูกส่งประกาศเรียบร้อย", ephemeral=True)
-            await log_message(f"📨 {interaction.user} ({interaction.user.id}) ส่งข้อความถึง {user.display_name} ({user.id}): {message_body}")
+            await bot.log_message(interaction.user.display_name, user.display_name, message_body)
         except discord.Forbidden:
             await interaction.response.send_message("❌ ไม่สามารถประกาศข้อความนี้ได้", ephemeral=True)
     else:
@@ -122,7 +135,7 @@ async def setup(interaction: discord.Interaction):
     print(f"[DEBUG] /setup called by {interaction.user} ({interaction.user.id})")
     if not interaction.user.guild_permissions.administrator:
         await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
-        await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
+        await bot.log_message(interaction.user.display_name, "ระบบ", "พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
         return
 
     embed = discord.Embed(
@@ -132,21 +145,21 @@ async def setup(interaction: discord.Interaction):
     )
 
     await interaction.channel.send(embed=embed, view=SetupView())
-    await log_message(f"⚙️ คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
+    await bot.log_message(interaction.user.display_name, "ระบบ", f"คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name}")
 
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await bot.tree.sync()
-    await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
+    await bot.log_message("ระบบ", "ระบบ", "บอทเริ่มทำงานเรียบร้อย")
 
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
 
-    log_content = f"📨 {message.author} ({message.author.id}) พิมพ์ในช่อง {message.channel} ({message.channel.id}): {message.content}"
-    await log_message(log_content)
+    log_content = f"📨 {message.author.display_name} พิมพ์ในช่อง {message.channel.name}: {message.content}"
+    await bot.log_message(message.author.display_name, message.channel.name, message.content)
 
     await bot.process_commands(message)
 
