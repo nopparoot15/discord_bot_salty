@@ -72,7 +72,9 @@ class SetupView(View):
 
     @discord.ui.button(label="📩 เปิดเมนูส่งข้อความ", style=discord.ButtonStyle.primary)
     async def open_modal(self, interaction: discord.Interaction, button: Button):
-        await interaction.response.send_modal(AnonymousMessageModal())
+        members = interaction.guild.members
+        view = PaginatedMemberDropdown(members)
+        await interaction.response.send_message("👤 เลือกผู้รับที่ต้องการส่งข้อความถึง:", view=view, ephemeral=True)
 
 class PaginatedMemberDropdown(View):
     def __init__(self, members, per_page=25, current_page=0):
@@ -189,4 +191,3 @@ async def on_ready():
 
 
 bot.run(TOKEN)
-
