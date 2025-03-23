@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -125,7 +124,10 @@ class PaginatedMemberDropdown(View):
 
     async def select_user(self, interaction: discord.Interaction):
         selected_id = int(self.dropdown.values[0])
-        await interaction.message.delete()
+        try:
+            await interaction.message.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความ dropdown ถูกลบไปแล้วก่อน interaction")
         await interaction.response.send_modal(AnonymousMessageModal(selected_id))
 
     @discord.ui.button(label="⬅️ ย้อนกลับ", style=discord.ButtonStyle.secondary, row=1)
