@@ -57,7 +57,30 @@ async def _send_webhook(content):
         """เมื่อผู้ใช้ยืนยันการส่งข้อความ"""
         announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
         mention_user = f"<@{self.user_id}>"
+        message_body = self.message.value
         content = f"{mention_user}
+{message_body}"
+
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+        await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
+        await interaction.followup.send(
+            f"✅ ข้อความถูกส่งเรียบร้อย! (จะลบใน {AUTODELETE_CONFIRM_AFTER} วินาที)",
+            ephemeral=True
+        )
+        await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {message_body}")
+
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        try:
+            msg = await interaction.original_response()
+            await msg.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความยืนยันถูกลบไปก่อนแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
+        announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
+        mention_user = f"<@{self.user_id}>"
+        content = f"{mention_user}
+{self.message.value}"
 {self.message.value}"
 {self.message.value}"
 
@@ -85,6 +108,7 @@ async def _send_webhook(content):
         content = f"{mention_user}
 {self.message.value}"
 {self.message.value}"
+{self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
 
         confirm_msg = await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
@@ -105,6 +129,7 @@ async def _send_webhook(content):
                 mention_user = f"<@{int(user_id)}>"
                 content = f"{mention_user}
 {self.message.value}"
+{self.message.value}"
             except ValueError:
                 await interaction.response.send_message("❌ User ID ไม่ถูกต้อง", ephemeral=True)
                 return
@@ -118,7 +143,29 @@ class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก
     name = TextInput(label="ชื่อผู้ใช้ (หรือบางส่วน)", required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
-        input_name = self.name.value.lower()
+        """เมื่อผู้ใช้ยืนยันการส่งข้อความ"""
+        announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
+        mention_user = f"<@{self.user_id}>"
+        message_body = self.message.value
+        content = f"{mention_user}
+{message_body}"
+
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+        await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
+        await interaction.followup.send(
+            f"✅ ข้อความถูกส่งเรียบร้อย! (จะลบใน {AUTODELETE_CONFIRM_AFTER} วินาที)",
+            ephemeral=True
+        )
+        await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {message_body}")
+
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        try:
+            msg = await interaction.original_response()
+            await msg.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความยืนยันถูกลบไปก่อนแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
         matched = [m for m in interaction.guild.members if not m.bot and input_name in m.display_name.lower()]
 
         if not matched:
@@ -206,7 +253,30 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         """เมื่อผู้ใช้ยืนยันการส่งข้อความ"""
         announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
         mention_user = f"<@{self.user_id}>"
+        message_body = self.message.value
         content = f"{mention_user}
+{message_body}"
+
+        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
+        await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
+        await interaction.followup.send(
+            f"✅ ข้อความถูกส่งเรียบร้อย! (จะลบใน {AUTODELETE_CONFIRM_AFTER} วินาที)",
+            ephemeral=True
+        )
+        await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {message_body}")
+
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+        try:
+            msg = await interaction.original_response()
+            await msg.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความยืนยันถูกลบไปก่อนแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
+        announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
+        mention_user = f"<@{self.user_id}>"
+        content = f"{mention_user}
+{self.message.value}"
 {self.message.value}"
 {self.message.value}"
 
@@ -234,6 +304,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         content = f"{mention_user}
 {self.message.value}"
 {self.message.value}"
+{self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
 
         confirm_msg = await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
@@ -248,6 +319,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
             print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
         mention_user = f"<@{self.user_id}>"
         content = f"{mention_user}
+{self.message.value}"
 {self.message.value}"
 {self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
