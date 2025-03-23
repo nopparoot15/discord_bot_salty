@@ -76,6 +76,7 @@ class MyBot(commands.Bot):
         self._is_logging = False
 
     async def setup_hook(self):
+        self.add_view(SetupView())  # Register persistent view
         await self.tree.sync()
 
     async def log_message(self, sender_user: discord.abc.User, recipient: str, message_body: str):
