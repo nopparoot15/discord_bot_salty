@@ -127,6 +127,24 @@ class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก
 
         await interaction.response.send_modal(AnonymousMessageModal(user_id=matched[0].id))
 
+
+@bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความลับ")
+async def setup(interaction: discord.Interaction):
+    if not interaction.user.guild_permissions.administrator:
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
+        await log_message(f"⚠️ ผู้ใช้ {interaction.user} ({interaction.user.id}) พยายามใช้คำสั่ง setup โดยไม่มีสิทธิ์")
+        return
+
+    embed = discord.Embed(
+        title="📬 ส่งข้อความลับแบบนิรนาม",
+        description="พิมพ์ชื่อสมาชิกที่คุณอยากส่งข้อความถึง แล้วพรี่โตจะส่งให้แทนโดยไม่มีใครรู้ว่าใครส่ง!",
+        color=discord.Color.blurple()
+    )
+
+    await interaction.channel.send(embed=embed, view=SetupView())
+    await log_message(f"⚙️ คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
+
+
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
