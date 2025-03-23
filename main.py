@@ -45,10 +45,11 @@ class SetupView(View):
 
 
 TOKEN = os.getenv("TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 ANNOUNCE_CHANNEL_ID = int(os.getenv("ANNOUNCE_CHANNEL_ID"))
 
-if not TOKEN or not ANNOUNCE_CHANNEL_ID:
-    print("❌ โปรดตั้งค่า environment variables (TOKEN, ANNOUNCE_CHANNEL_ID)")
+if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
+    print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
 AUTODELETE_CONFIRM_AFTER = 5
