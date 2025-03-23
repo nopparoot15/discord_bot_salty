@@ -49,10 +49,9 @@ class SetupView(View):
 
 
 TOKEN = os.getenv("TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 ANNOUNCE_CHANNEL_ID = os.getenv("ANNOUNCE_CHANNEL_ID")
 
-if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
+if not TOKEN or not ANNOUNCE_CHANNEL_ID:
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
@@ -71,11 +70,17 @@ class MyBot(commands.Bot):
 
 bot = MyBot()
 
+LOG_CHANNEL_ID = 1353312973728518226  # ช่องที่ใช้แทน webhook
+
 async def log_message(content):
     print(f"[LOG] {content}")
+    try:
+        log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
+        await log_channel.send(content)
+    except Exception as e:
+        print(f"❌ ไม่สามารถส่ง log เข้าแชแนลได้: {e}")
     asyncio.create_task(_send_webhook(content))
 
-async def _send_webhook(content):
     async with aiohttp.ClientSession() as session:
         async with session.post(WEBHOOK_URL, json={"content": content}) as response:
             if response.status != 204:
