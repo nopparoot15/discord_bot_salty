@@ -10,6 +10,26 @@ from discord.ui import View, Button, Modal, TextInput, Select
 from math import ceil
 
 
+
+class AnonymousMessageModal(Modal, title="ส่งข้อความลับ"):
+    def __init__(self, user_id: int):
+        super().__init__()
+        self.user_id = user_id
+        self.message = TextInput(
+            label="ข้อความ",
+            style=discord.TextStyle.paragraph,
+            required=True
+        )
+        self.add_item(self.message)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        message_body = self.message.value.strip()
+        if not message_body:
+            await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+            return
+        await send_anon_message(interaction, self.user_id, message_body)
+
+
 class SetupView(View):
     def __init__(self):
         super().__init__(timeout=None)
