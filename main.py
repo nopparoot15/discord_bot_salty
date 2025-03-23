@@ -1,7 +1,5 @@
 import os
 import sys
-import asyncio
-import aiohttp
 import discord
 from discord.ext import commands
 from discord.ui import View, Button, Modal, TextInput, Select
@@ -70,6 +68,9 @@ bot = MyBot()
 LOG_CHANNEL_ID = 1353312973728518226  # ช่องที่ใช้แทน webhook
 
 async def log_message(content):
+    log_channel = bot.get_channel(LOG_CHANNEL_ID)
+    if log_channel:
+        await log_channel.send(content)
     print(f"[LOG] {content}")
 
 async def send_anon_message(interaction, user_id: int, message_body: str):
@@ -137,5 +138,15 @@ async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await bot.tree.sync()
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    log_content = f"📨 {message.author} ({message.author.id}) พิมพ์ในช่อง {message.channel} ({message.channel.id}): {message.content}"
+    await log_message(log_content)
+
+    await bot.process_commands(message)
 
 bot.run(TOKEN)
