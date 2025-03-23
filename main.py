@@ -86,17 +86,21 @@ class MyBot(commands.Bot):
 bot = MyBot()
 
 async def send_anon_message(interaction, user_id: int, message_body: str):
-    user = interaction.guild.get_member(user_id)
-    announce_channel = interaction.guild.get_channel(ANNOUNCE_CHANNEL_ID)
-    if user and announce_channel:
-        try:
+    try:
+        user = await bot.fetch_user(user_id)
+        announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
+        if user and announce_channel:
             await announce_channel.send(f"มีคนฝากบอก {user.mention} ว่า\n{message_body}")
             await interaction.response.send_message("✅ ข้อความถูกส่งประกาศเรียบร้อย", ephemeral=True)
             await bot.log_message(interaction.user.display_name, user.display_name, message_body)
-        except discord.Forbidden:
-            await interaction.response.send_message("❌ ไม่สามารถประกาศข้อความนี้ได้", ephemeral=True)
-    else:
-        await interaction.response.send_message("❌ ผู้ใช้นี้ไม่อยู่ในเซิร์ฟเวอร์หรือไม่สามารถเข้าถึงช่องประกาศได้", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ ผู้ใช้นี้ไม่อยู่ในเซิร์ฟเวอร์หรือไม่สามารถเข้าถึงช่องประกาศได้", ephemeral=True)
+    except discord.NotFound:
+        await interaction.response.send_message("❌ ไม่พบผู้ใช้หรือช่องประกาศ", ephemeral=True)
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ ไม่มีสิทธิ์ในการเข้าถึงผู้ใช้หรือช่องประกาศ", ephemeral=True)
+    except discord.HTTPException:
+        await interaction.response.send_message("❌ เกิดข้อผิดพลาดในการส่งข้อความ", ephemeral=True)
 
 class AnonymousMessageModal(Modal, title="ส่งข้อความนิรนาม"):
     def __init__(self, user_id: int):
@@ -157,10 +161,7 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
-
-    log_content = f"📨 {message.author.display_name} พิมพ์ในช่อง {message.channel.name}: {message.content}"
     await bot.log_message(message.author.display_name, message.channel.name, message.content)
-
     await bot.process_commands(message)
 
 bot.run(TOKEN)
