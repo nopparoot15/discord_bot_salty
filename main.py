@@ -18,7 +18,19 @@ class NameInputModal(Modal):
         self.add_item(self.search_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        message_body = self.body.value.strip()
+    message_body = self.body.value.strip()
+
+    if not message_body:
+        await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+        return
+
+    await send_anon_message(interaction, self.user_id, message_body)
+
+    try:
+        if interaction.message and not interaction.message.flags.ephemeral:
+            await interaction.message.edit(content=' ', embed=None, view=None)
+    except discord.NotFound:
+        print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
         if not message_body:
         await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
         return
@@ -95,7 +107,7 @@ async def log_message(content):
         await log_channel.send(content)
     except Exception as e:
         print(f"❌ ไม่สามารถส่ง log เข้าแชแนลได้: {e}")
-    
+
 
     async with aiohttp.ClientSession() as session:
         async with session.post(WEBHOOK_URL, json={"content": content}) as response:
@@ -130,11 +142,46 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
     def __init__(self, user_id: int):
         super().__init__()
         self.user_id = user_id
-        self.body = TextInput(label="พิมพ์ข้อความลับของคุณที่นี่เลยน้า~", style=discord.TextStyle.paragraph, required=True)
+        self.body = TextInput(
+            label="พิมพ์ข้อความลับของคุณที่นี่เลยน้า~",
+            style=discord.TextStyle.paragraph,
+            required=True
+        )
         self.add_item(self.body)
 
     async def on_submit(self, interaction: discord.Interaction):
         message_body = self.body.value.strip()
+
+        if not message_body:
+            await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+            return
+
+        await send_anon_message(interaction, self.user_id, message_body)
+
+        try:
+            if interaction.message and not interaction.message.flags.ephemeral:
+                await interaction.message.edit(content=' ', embed=None, view=None)
+        except discord.NotFound:
+            print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
+        super().__init__()
+        self.user_id = user_id
+        self.body = TextInput(label="พิมพ์ข้อความลับของคุณที่นี่เลยน้า~", style=discord.TextStyle.paragraph, required=True)
+        self.add_item(self.body)
+
+    async def on_submit(self, interaction: discord.Interaction):
+    message_body = self.body.value.strip()
+
+    if not message_body:
+        await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+        return
+
+    await send_anon_message(interaction, self.user_id, message_body)
+
+    try:
+        if interaction.message and not interaction.message.flags.ephemeral:
+            await interaction.message.edit(content=' ', embed=None, view=None)
+    except discord.NotFound:
+        print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
         if not message_body:
         await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
         return
