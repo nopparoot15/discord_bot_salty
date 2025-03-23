@@ -13,16 +13,16 @@ class AnonymousMessageModal(Modal):
     def __init__(self, user_id: int):
         super().__init__(title="ส่งข้อความลับ")
         self.user_id = user_id
-        self.message = TextInput(
+        self.body = TextInput(
             label="ข้อความ",
             style=discord.TextStyle.paragraph,
             required=True,
             max_length=2000
         )
-        self.add_item(self.message)
+        self.add_item(self.body)
 
     async def on_submit(self, interaction: discord.Interaction):
-        message_body = self.message.value.strip()
+        message_body = self.body.value.strip()
         if not message_body:
             await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
             return
@@ -127,11 +127,11 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
     def __init__(self, user_id: int):
         super().__init__()
         self.user_id = user_id
-        self.message = TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
-        self.add_item(self.message)
+        self.body = TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
+        self.add_item(self.body)
 
     async def on_submit(self, interaction: discord.Interaction):
-        message_body = self.message.value.strip()
+        message_body = self.body.value.strip()
         if not message_body:
             await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
             return
