@@ -12,9 +12,9 @@ from math import ceil
 
 class NameInputModal(Modal):
     def __init__(self):
-        super().__init__(title="พิมพ์ชื่อสมาชิก")
+        super().__init__(title="ส่งข้อความลับถึงใครดีน้า~")
         self.search_input = TextInput(
-            label="ชื่อผู้ใช้ (หรือบางส่วน)",
+            label="ชื่อเล่นของเพื่อนที่คุณอยากส่งถึง (พิมพ์บางส่วนก็ได้)",
             style=discord.TextStyle.short,
             required=True
         )
@@ -28,11 +28,11 @@ class NameInputModal(Modal):
         ]
 
         if not matched:
-            await interaction.response.send_message("❌ ไม่พบผู้ใช้ที่ตรงกับชื่อที่ป้อน", ephemeral=True)
+            await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
 
         await interaction.response.send_message(
-            "🔽 โปรดเลือกผู้ใช้ที่คุณต้องการส่งถึง:",
+            "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
             view=UserSelect(matched),
             ephemeral=True
         )
@@ -42,7 +42,7 @@ class SetupView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="📩 ส่งข้อความลับ", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="📩 ส่งข้อความลับเลย!", style=discord.ButtonStyle.primary)
     async def send_secret_message(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(NameInputModal())
 
@@ -136,7 +136,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
     def __init__(self, user_id: int):
         super().__init__()
         self.user_id = user_id
-        self.body = TextInput(label="ข้อความ", style=discord.TextStyle.paragraph, required=True)
+        self.body = TextInput(label="พิมพ์ข้อความลับของคุณที่นี่เลยน้า~", style=discord.TextStyle.paragraph, required=True)
         self.add_item(self.body)
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -146,15 +146,15 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
             return
         await send_anon_message(interaction, self.user_id, message_body)
 
-class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก"):
-    name = TextInput(label="ชื่อผู้ใช้ (หรือบางส่วน)", required=True)
+class NameInputModal(Modal, title="ส่งข้อความลับถึงใครดีน้า~"):
+    name = TextInput(label="ชื่อเล่นของเพื่อนที่คุณอยากส่งถึง (พิมพ์บางส่วนก็ได้)", required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
         input_name = self.search_input.value.lower()
         matched = [m for m in interaction.guild.members if not m.bot and input_name in m.display_name.lower()]
 
         if not matched:
-            await interaction.response.send_message("❌ ไม่พบผู้ใช้ที่ตรงกับชื่อที่ป้อน", ephemeral=True)
+            await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
 
         if len(matched) > 1:
@@ -176,8 +176,8 @@ async def setup(interaction: discord.Interaction):
         return
 
     embed = discord.Embed(
-        title="📬 ส่งข้อความลับแบบนิรนาม",
-        description="พิมพ์ชื่อสมาชิกที่คุณอยากส่งข้อความถึง แล้วพรี่โตจะส่งให้แทนโดยไม่มีใครรู้ว่าใครส่ง!",
+        title="📬 ส่งข้อความลับถึงใครบางคนแบบเนียน ๆ",
+        description="พิมพ์ชื่อเพื่อน แล้วพรี่โตจะช่วยส่งข้อความลับให้แบบไม่มีใครรู้ว่าใครส่งเลย~",
         color=discord.Color.blurple()
     )
 
