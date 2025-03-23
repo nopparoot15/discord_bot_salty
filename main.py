@@ -77,7 +77,6 @@ async def _send_webhook(content):
             if response.status != 204:
                 print(f"❌ ไม่สามารถส่ง webhook ได้: {response.status} - {await response.text()}")
 
-
 async def send_anon_message(interaction, user_id: int, message_body: str):
     try:
         announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
@@ -85,7 +84,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         content = f"{mention_user}\n{message_body}"
 
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
-        await interaction.followup.send("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
+        response_message = await interaction.followup.send("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
 
         followup = await interaction.followup.send(
             f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
