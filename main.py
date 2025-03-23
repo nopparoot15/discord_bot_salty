@@ -79,6 +79,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         try:
             await user.send(message_body)
             await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย", ephemeral=True)
+            await log_message(f"📨 {interaction.user} ({interaction.user.id}) ส่งข้อความถึง {user.display_name} ({user.id}): {message_body}")
         except discord.Forbidden:
             await interaction.response.send_message("❌ ไม่สามารถส่งข้อความถึงผู้ใช้คนนี้ได้", ephemeral=True)
     else:
