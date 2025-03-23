@@ -5,6 +5,10 @@ from discord.ext import commands
 from discord.ui import View, Button, Modal, TextInput, Select
 from datetime import datetime, timezone, timedelta
 from collections import deque
+import difflib
+
+# Constants
+LOG_CHANNEL_ID = 1350531209377349662
 
 class NameInputModal(Modal):
     def __init__(self):
@@ -22,10 +26,14 @@ class NameInputModal(Modal):
             await interaction.response.send_message("❌ กรุณาใส่ชื่อ", ephemeral=True)
             return
 
-        matched = [
-            m for m in interaction.guild.members
-            if not m.bot and input_name in m.display_name.lower()
-        ]
+        member_names = {
+            m.display_name.lower(): m
+            for m in interaction.guild.members
+            if not m.bot
+        }
+        close_matches = difflib.get_close_matches(input_name, member_names.keys(), n=5, cutoff=0.4)
+
+        matched = [member_names[name] for name in close_matches]
         if not matched:
             await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
@@ -46,17 +54,16 @@ class SetupView(View):
 
 
 TOKEN = os.getenv("TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 ANNOUNCE_CHANNEL_ID_STR = os.getenv("ANNOUNCE_CHANNEL_ID")
 
-if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID_STR or not ANNOUNCE_CHANNEL_ID_STR.isdigit():
-    print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
+if not TOKEN or not ANNOUNCE_CHANNEL_ID_STR or not ANNOUNCE_CHANNEL_ID_STR.isdigit():
+    print("❌ โปรดตั้งค่า environment variables (TOKEN, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
 ANNOUNCE_CHANNEL_ID = int(ANNOUNCE_CHANNEL_ID_STR)
 
-LOG_LIMIT_PERIOD = timedelta(minutes=1)  # ระยะเวลาในการจำกัดการส่ง log
-LOG_LIMIT_COUNT = 5  # จำนวนครั้งสูงสุดในการส่ง log ในช่วงเวลาที่กำหนด
+LOG_LIMIT_PERIOD = timedelta(minutes=1)
+LOG_LIMIT_COUNT = 5
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -66,7 +73,7 @@ class MyBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
         self.log_queue = deque()
-        self._is_logging = False  # เพิ่ม flag กัน recursion
+        self._is_logging = False
 
     async def setup_hook(self):
         await self.tree.sync()
@@ -82,14 +89,13 @@ class MyBot(commands.Bot):
         self._is_logging = True
         try:
             now = datetime.now(timezone.utc)
-            # ลบ log ที่เก่าเกินจาก queue
             while self.log_queue and self.log_queue[0] < now - LOG_LIMIT_PERIOD:
                 self.log_queue.popleft()
-            # ตรวจสอบจำนวน log ในช่วงเวลาที่กำหนด
-            if len(self.log_queue) < LOG_LIMIT_COUNT:
-                webhook = discord.SyncWebhook.from_url(WEBHOOK_URL)
 
-                # ✨ สร้าง Embed
+            if len(self.log_queue) < LOG_LIMIT_COUNT:
+                if len(message_body) > 1024:
+                    message_body = message_body[:1021] + "..."
+
                 embed = discord.Embed(
                     title="📨 มีข้อความลับถูกส่ง",
                     color=discord.Color.purple(),
@@ -97,13 +103,17 @@ class MyBot(commands.Bot):
                 )
                 embed.set_author(name=sender_name, icon_url=sender_user.display_avatar.url)
                 embed.add_field(name="🎯 ถึง", value=recipient, inline=True)
-                embed.add_field(name="💬 ข้อความ", value=message_body[:1024], inline=False)
+                embed.add_field(name="💬 ข้อความ", value=message_body, inline=False)
 
-                webhook.send(embed=embed)
+                log_channel = self.get_channel(LOG_CHANNEL_ID)
+                if log_channel:
+                    await log_channel.send(embed=embed)
                 self.log_queue.append(now)
                 print(f"[LOG] {sender_name} -> {recipient}: {message_body}")
             else:
                 print("[LOG] การส่ง log ถูกจำกัดเนื่องจากมี log มากเกินไปในช่วงเวลาที่กำหนด")
+        except Exception as e:
+            print(f"[ERROR] Failed to send log: {e}")
         finally:
             self._is_logging = False
 
@@ -141,11 +151,9 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
 
     async def on_submit(self, interaction: discord.Interaction):
         message_body = self.body.value.strip()
-
         if not message_body:
             await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
             return
-
         await send_anon_message(interaction, self.user_id, message_body)
 
 class UserSelect(View):
@@ -158,6 +166,9 @@ class UserSelect(View):
 
     async def select_callback(self, interaction: discord.Interaction):
         selected_user_id = int(self.select.values[0])
+        if selected_user_id == interaction.user.id:
+            await interaction.response.send_message("❌ คุณไม่สามารถส่งข้อความลับถึงตัวเองได้นะ!", ephemeral=True)
+            return
         await interaction.response.send_modal(AnonymousMessageModal(user_id=selected_user_id))
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความลับ")
@@ -180,7 +191,6 @@ async def setup(interaction: discord.Interaction):
 @bot.event
 async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
-    await bot.tree.sync()
     await bot.log_message(bot.user, "ระบบ", "บอทเริ่มทำงานเรียบร้อย")
 
 bot.run(TOKEN)
