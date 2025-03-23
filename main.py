@@ -1,10 +1,10 @@
 import os
 import sys
 import asyncio
+import aiohttp
 import discord
 from discord.ext import commands
 from discord.ui import View, Button, Modal, TextInput, Select
-
 
 class NameInputModal(Modal):
     def __init__(self):
@@ -17,27 +17,23 @@ class NameInputModal(Modal):
         self.add_item(self.search_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        input_name = self.search_input.value.lower().strip()
+        input_name = self.search_input.value.strip().lower()
+        if not input_name:
+            await interaction.response.send_message("❌ กรุณาใส่ชื่อ", ephemeral=True)
+            return
+
         matched = [
             m for m in interaction.guild.members
             if not m.bot and input_name in m.display_name.lower()
         ]
-
         if not matched:
             await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
 
         await interaction.response.send_message(
             "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
-            ephemeral=True
-        )
-        response_message = await interaction.followup.send(
-            "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
             view=UserSelect(matched), ephemeral=True
         )
-        # แก้ไขข้อความให้ว่างหลังจากเวลาที่กำหนด
-        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
-        await response_message.edit(content=' ', embed=None, view=None)
 
 
 class SetupView(View):
@@ -62,7 +58,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-
 class MyBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
@@ -70,42 +65,23 @@ class MyBot(commands.Bot):
     async def setup_hook(self):
         await self.tree.sync()
 
-
 bot = MyBot()
 
 LOG_CHANNEL_ID = 1353312973728518226  # ช่องที่ใช้แทน webhook
 
 async def log_message(content):
     print(f"[LOG] {content}")
-    try:
-        log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
-        await log_channel.send(content)
-    except Exception as e:
-        print(f"❌ ไม่สามารถส่ง log เข้าแชแนลได้: {e}")
-
 
 async def send_anon_message(interaction, user_id: int, message_body: str):
-    try:
-        announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
-        mention_user = f"<@{user_id}>"
-        content = f"{mention_user}\n{message_body}"
-
-        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
-        response_message = await interaction.followup.send("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
-
-        followup = await interaction.followup.send(
-            f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
-            ephemeral=True
-        )
-
-        await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
-
-        # แก้ไขข้อความ follow-up ให้เป็นว่างหลังจากเวลาที่กำหนด
-        await followup.edit(content=' ', embed=None, view=None)
-
-    except Exception as e:
-        print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
-
+    user = interaction.guild.get_member(user_id)
+    if user:
+        try:
+            await user.send(message_body)
+            await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ ไม่สามารถส่งข้อความถึงผู้ใช้คนนี้ได้", ephemeral=True)
+    else:
+        await interaction.response.send_message("❌ ผู้ใช้นี้ไม่อยู่ในเซิร์ฟเวอร์", ephemeral=True)
 
 class AnonymousMessageModal(Modal, title="ส่งข้อความนิรนาม"):
     def __init__(self, user_id: int):
@@ -127,13 +103,6 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
 
         await send_anon_message(interaction, self.user_id, message_body)
 
-        try:
-            if interaction.message and not interaction.message.flags.ephemeral:
-                await interaction.message.edit(content=' ', embed=None, view=None)
-        except discord.NotFound:
-            print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
-
-
 class UserSelect(View):
     def __init__(self, matched_users):
         super().__init__(timeout=None)
@@ -145,7 +114,6 @@ class UserSelect(View):
     async def select_callback(self, interaction: discord.Interaction):
         selected_user_id = int(self.select.values[0])
         await interaction.response.send_modal(AnonymousMessageModal(user_id=selected_user_id))
-
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความลับ")
 async def setup(interaction: discord.Interaction):
@@ -163,7 +131,6 @@ async def setup(interaction: discord.Interaction):
 
     await interaction.channel.send(embed=embed, view=SetupView())
     await log_message(f"⚙️ คำสั่ง setup ถูกใช้งานในเซิร์ฟเวอร์: {interaction.guild.name} โดย {interaction.user} ({interaction.user.id})")
-
 
 @bot.event
 async def on_ready():
