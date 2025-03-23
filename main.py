@@ -59,6 +59,7 @@ async def _send_webhook(content):
         mention_user = f"<@{self.user_id}>"
         content = f"{mention_user}
 {self.message.value}"
+{self.message.value}"
 
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
 
@@ -83,6 +84,7 @@ async def _send_webhook(content):
             mention_user = f"<@{self.user_id}>"
         content = f"{mention_user}
 {self.message.value}"
+{self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
 
         confirm_msg = await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
@@ -101,7 +103,8 @@ async def _send_webhook(content):
         if user_id:
             try:
                 mention_user = f"<@{int(user_id)}>"
-                content = f"{mention_user}\n{content}"
+                content = f"{mention_user}
+{self.message.value}"
             except ValueError:
                 await interaction.response.send_message("❌ User ID ไม่ถูกต้อง", ephemeral=True)
                 return
@@ -180,6 +183,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         mention_user = f"<@{self.user_id}>"
         content = f"{mention_user}
 {self.message.value}"
+{self.message.value}"
 
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
 
@@ -204,6 +208,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
             mention_user = f"<@{self.user_id}>"
         content = f"{mention_user}
 {self.message.value}"
+{self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
 
         confirm_msg = await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
@@ -218,6 +223,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
             print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
         mention_user = f"<@{self.user_id}>"
         content = f"{mention_user}
+{self.message.value}"
 {self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
         await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=True)
@@ -278,6 +284,12 @@ async def on_ready():
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
 
+
+
+# --- เพิ่มโค้ด dropdown สำหรับแท็กสมาชิก ---
+
+
+# --- Slash command พร้อม autocomplete ---
 
 @bot.tree.command(name="send_anon", description="ส่งข้อความนิรนามถึงสมาชิกที่เลือก")
 @app_commands.describe(user="เลือกผู้ใช้ที่ต้องการส่งข้อความถึง")
