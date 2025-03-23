@@ -88,11 +88,11 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         content = f"{mention_user}\n{message_body}"
 
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
-        msg = await interaction.response.send_message("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=False)
+        await interaction.response.send_message("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
 
         followup = await interaction.followup.send(
             f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
-            ephemeral=False
+            ephemeral=True
         )
 
         await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
@@ -104,10 +104,6 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
             print("⚠️ ข้อความ followup ถูกลบไปแล้ว")
         except Exception as e:
             print(f"❌ ลบ followup ไม่สำเร็จ: {e}")
-
-        # ลบข้อความทั้งหมดในช่อง
-        await interaction.channel.purge()
-        await interaction.channel.send("📩 ส่งข้อความลับเลย!", view=SetupView())
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
