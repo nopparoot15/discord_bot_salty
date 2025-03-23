@@ -100,7 +100,6 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         )
 
         await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
-        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
 
         # แก้ไขข้อความ follow-up ให้เป็นว่างหลังจากเวลาที่กำหนด
         await followup.edit(content=' ', embed=None, view=None)
