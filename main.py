@@ -1,24 +1,13 @@
-import os
-import sys
-import time
-import asyncio
-import aiohttp
-import discord
-from discord.ext import commands
-from discord import app_commands
-from discord.ui import View, Button, Modal, TextInput, Select
-from math import ceil
 
-
-
-class AnonymousMessageModal(Modal, title="ส่งข้อความลับ"):
+class AnonymousMessageModal(Modal):
     def __init__(self, user_id: int):
-        super().__init__()
+        super().__init__(title="ส่งข้อความลับ")
         self.user_id = user_id
         self.message = TextInput(
             label="ข้อความ",
             style=discord.TextStyle.paragraph,
-            required=True
+            required=True,
+            max_length=2000
         )
         self.add_item(self.message)
 
