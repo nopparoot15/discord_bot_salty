@@ -47,8 +47,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
     try:
         announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
         mention_user = f"<@{user_id}>"
-        content = f"{mention_user}
-{message_body}"
+        content = f"{mention_user}\n{message_body}"
 
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
         await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=False)
