@@ -141,7 +141,7 @@ class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก
     name = TextInput(label="ชื่อผู้ใช้ (หรือบางส่วน)", required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
-        input_name = self.name.value.lower()
+        input_name = self.search_input.value.lower()
         matched = [m for m in interaction.guild.members if not m.bot and input_name in m.display_name.lower()]
 
         if not matched:
