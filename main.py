@@ -217,7 +217,8 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         except Exception as e:
             print(f"❌ ลบข้อความยืนยันไม่สำเร็จ: {e}")
         mention_user = f"<@{self.user_id}>"
-        content = f"{mention_user}\n{self.message.value}"
+        content = f"{mention_user}
+{self.message.value}"
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
         await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=True)
         await log_message(f"📩 ส่งถึง {self.user_id} โดย {interaction.user}: {self.message.value}")
@@ -276,5 +277,16 @@ async def on_ready():
     print(f'✅ บอทพร้อมใช้งาน: {bot.user}')
     await log_message("✅ บอทเริ่มทำงานเรียบร้อย")
 
+
+
+@bot.tree.command(name="send_anon", description="ส่งข้อความนิรนามถึงสมาชิกที่เลือก")
+@app_commands.describe(user="เลือกผู้ใช้ที่ต้องการส่งข้อความถึง")
+@app_commands.autocomplete(user=lambda interaction, current: [
+    app_commands.Choice(name=member.display_name, value=str(member.id))
+    for member in interaction.guild.members
+    if not member.bot and current.lower() in member.display_name.lower()
+][:25])
+async def send_anon(interaction: discord.Interaction, user: str):
+    await interaction.response.send_modal(AnonymousMessageModal(int(user)))
 
 bot.run(TOKEN)
