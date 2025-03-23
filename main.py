@@ -18,7 +18,19 @@ class NameInputModal(Modal):
         self.add_item(self.search_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        input_name = self.search_input.value.lower()
+    message_body = self.body.value.strip()
+    if not message_body:
+        await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+        return
+
+    await send_anon_message(interaction, self.user_id, message_body)
+
+    # พยายามลบข้อความต้นทางแบบปลอดภัย
+    try:
+        if interaction.message and not interaction.message.flags.ephemeral:
+            await interaction.message.edit(content=' ', embed=None, view=None)
+    except discord.NotFound:
+        print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
         matched = [
             m for m in interaction.guild.members
             if not m.bot and input_name in m.display_name.lower()
@@ -119,7 +131,19 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         self.add_item(self.body)
 
     async def on_submit(self, interaction: discord.Interaction):
-        message_body = self.body.value.strip()
+    message_body = self.body.value.strip()
+    if not message_body:
+        await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+        return
+
+    await send_anon_message(interaction, self.user_id, message_body)
+
+    # พยายามลบข้อความต้นทางแบบปลอดภัย
+    try:
+        if interaction.message and not interaction.message.flags.ephemeral:
+            await interaction.message.edit(content=' ', embed=None, view=None)
+    except discord.NotFound:
+        print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
         if not message_body:
             await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
             return
