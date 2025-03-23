@@ -125,7 +125,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         announce_channel = await bot.fetch_channel(ANNOUNCE_CHANNEL_ID)
         if user and announce_channel:
             await announce_channel.send(
-                f"💌 {user.mention} มีคนแอบฝากข้อความถึงคุณแบบลับ ๆ:\n>>> {message_body}"
+                f"💌 {user.mention} มีคนฝากข้อความถึงคุณ:\n>>> {message_body}"
             )
             await interaction.response.send_message("✅ ข้อความถูกส่งประกาศเรียบร้อย", ephemeral=True)
             await bot.log_message(interaction.user, user.display_name, message_body)
