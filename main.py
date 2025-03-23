@@ -18,41 +18,44 @@ class NameInputModal(Modal):
         self.add_item(self.search_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-    message_body = self.body.value.strip()
-    if not message_body:
+        message_body = self.body.value.strip()
+        if not message_body:
+            await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+            return
+                await send_anon_message(interaction, self.user_id, message_body)
+                try:
+            if interaction.message and not interaction.message.flags.ephemeral:
+                await interaction.message.edit(content=' ', embed=None, view=None)
+        except discord.NotFound:
+            print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
+        if not message_body:
         await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
         return
-    pass
-    await send_anon_message(interaction, self.user_id, message_body)
-
-    # พยายามลบข้อความต้นทางแบบปลอดภัย
-    try:
+        pass
+        await send_anon_message(interaction, self.user_id, message_body)
+                # พยายามลบข้อความต้นทางแบบปลอดภัย
+        try:
         if interaction.message and not interaction.message.flags.ephemeral:
             await interaction.message.edit(content=' ', embed=None, view=None)
-    except discord.NotFound:
+        except discord.NotFound:
         print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
         matched = [
             m for m in interaction.guild.members
             if not m.bot and input_name in m.display_name.lower()
         ]
-
-        if not matched:
+                if not matched:
             await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
-
-        await interaction.response.send_message(
+                await interaction.response.send_message(
             "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
             ephemeral=True)
         response_message = await interaction.followup.send(
             "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
             view=UserSelect(matched), ephemeral=True)
-
-        # แก้ไขข้อความให้ว่างหลังจากเวลาที่กำหนด
+                # แก้ไขข้อความให้ว่างหลังจากเวลาที่กำหนด
         await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
         await response_message.edit(content=' ', embed=None, view=None)
-
-
-class SetupView(View):
+                class SetupView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -131,18 +134,26 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         self.add_item(self.body)
 
     async def on_submit(self, interaction: discord.Interaction):
-    message_body = self.body.value.strip()
-    if not message_body:
+        message_body = self.body.value.strip()
+        if not message_body:
+            await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+            return
+                await send_anon_message(interaction, self.user_id, message_body)
+                try:
+            if interaction.message and not interaction.message.flags.ephemeral:
+                await interaction.message.edit(content=' ', embed=None, view=None)
+        except discord.NotFound:
+            print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
+        if not message_body:
         await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
         return
-    pass
-    await send_anon_message(interaction, self.user_id, message_body)
-
-    # พยายามลบข้อความต้นทางแบบปลอดภัย
-    try:
+        pass
+        await send_anon_message(interaction, self.user_id, message_body)
+                # พยายามลบข้อความต้นทางแบบปลอดภัย
+        try:
         if interaction.message and not interaction.message.flags.ephemeral:
             await interaction.message.edit(content=' ', embed=None, view=None)
-    except discord.NotFound:
+        except discord.NotFound:
         print("⚠️ ข้อความต้นทางถูกลบไปแล้ว แก้ไขไม่ได้")
         if not message_body:
             await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
@@ -151,9 +162,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         
         # แก้ไขข้อความ "🔍 เจอชื่อคล้ายกันหลายคนเลย~" ให้เป็นว่างหลังจากกดปุ่มส่งข้อความ
         await interaction.message.edit(content=' ', embed=None, view=None)
-
-
-class UserSelect(View):
+                class UserSelect(View):
     def __init__(self, matched_users):
         super().__init__(timeout=None)
         options = [discord.SelectOption(label=user.display_name, value=str(user.id)) for user in matched_users]
