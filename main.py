@@ -3,7 +3,7 @@ import sys
 import discord
 from discord.ext import commands
 from discord.ui import View, Button, Modal, TextInput, Select
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from collections import deque
 
 class NameInputModal(Modal):
@@ -69,7 +69,7 @@ class MyBot(commands.Bot):
         await self.tree.sync()
 
     async def log_message(self, sender, recipient, message_body):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         # ลบ log ที่เก่าเกินจาก queue
         while self.log_queue and self.log_queue[0] < now - LOG_LIMIT_PERIOD:
             self.log_queue.popleft()
