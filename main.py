@@ -25,23 +25,14 @@ class NameInputModal(Modal):
         ]
 
         if not matched:
-            response_message = await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
-            await self.delete_after(response_message, 5)
+            await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
 
-        response_message = await interaction.response.send_message(
+        await interaction.response.send_message(
             "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
             view=UserSelect(matched),
             ephemeral=True
         )
-        await self.delete_after(response_message, 5)
-
-    async def delete_after(self, message, delay):
-        await asyncio.sleep(delay)
-        try:
-            await message.delete()
-        except discord.NotFound:
-            pass
 
 
 class SetupView(View):
@@ -94,7 +85,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         content = f"{mention_user}\n{message_body}"
 
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
-        response_message = await interaction.followup.send("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
+        await interaction.followup.send("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
 
         followup = await interaction.followup.send(
             f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
@@ -102,18 +93,18 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         )
 
         await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
-        await self.delete_after(response_message, AUTODELETE_CONFIRM_AFTER)
-        await self.delete_after(followup, AUTODELETE_CONFIRM_AFTER)
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+
+        # ลบข้อความ follow-up หลังจากเวลาที่กำหนด
+        try:
+            await followup.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความ follow-up ถูกลบไปแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความ follow-up ไม่สำเร็จ: {e}")
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
-
-    async def delete_after(self, message, delay):
-        await asyncio.sleep(delay)
-        try:
-            await message.delete()
-        except discord.NotFound:
-            pass
 
 
 class AnonymousMessageModal(Modal, title="ส่งข้อความนิรนาม"):
@@ -126,8 +117,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
     async def on_submit(self, interaction: discord.Interaction):
         message_body = self.body.value.strip()
         if not message_body:
-            response_message = await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
-            await self.delete_after(response_message, 5)
+            await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
             return
         await send_anon_message(interaction, self.user_id, message_body)
         
@@ -135,14 +125,9 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         try:
             await interaction.message.delete()
         except discord.NotFound:
-            pass
-
-    async def delete_after(self, message, delay):
-        await asyncio.sleep(delay)
-        try:
-            await message.delete()
-        except discord.NotFound:
-            pass
+            print("⚠️ ข้อความถูกลบไปแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความไม่สำเร็จ: {e}")
 
 
 class UserSelect(View):
