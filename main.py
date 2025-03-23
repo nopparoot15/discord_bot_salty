@@ -161,6 +161,11 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
+
+    # ✅ ข้ามถ้าเป็นข้อความจาก channel log
+    if message.channel.id == ANNOUNCE_CHANNEL_ID:
+        return
+
     await bot.log_message(message.author.display_name, message.channel.name, message.content)
     await bot.process_commands(message)
 
