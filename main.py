@@ -10,9 +10,9 @@ from discord.ui import View, Button, Modal, TextInput, Select
 from math import ceil
 
 
-class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก"):
+class NameInputModal(Modal):
     def __init__(self):
-        super().__init__()
+        super().__init__(title="พิมพ์ชื่อสมาชิก")
         self.search_input = TextInput(
             label="ชื่อผู้ใช้ (หรือบางส่วน)",
             style=discord.TextStyle.short,
