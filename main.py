@@ -14,7 +14,7 @@ class NameInputModal(Modal):
     def __init__(self):
         super().__init__(title="ส่งข้อความลับถึงใครดีน้า~")
         self.search_input = TextInput(
-            label="ชื่อเล่นของเพื่อนที่คุณอยากส่งถึง (พิมพ์บางส่วนก็ได้)",
+            label="ชื่อเล่นของเพื่อนที่คุณอยากส่งถึง",
             style=discord.TextStyle.short,
             required=True
         )
@@ -45,8 +45,6 @@ class SetupView(View):
     @discord.ui.button(label="📩 ส่งข้อความลับเลย!", style=discord.ButtonStyle.primary)
     async def send_secret_message(self, interaction: discord.Interaction, button: Button):
         await interaction.response.send_modal(NameInputModal())
-
-
 
 
 TOKEN = os.getenv("TOKEN")
@@ -111,27 +109,6 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
 
 
-        announce_channel = await bot.fetch_channel(int(ANNOUNCE_CHANNEL_ID))
-        mention_user = f"<@{user_id}>"
-        content = f"{mention_user}\n{message_body}"
-
-        await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
-        await interaction.response.send_message("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=False)
-        await interaction.followup.send(
-            f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
-            ephemeral=True
-        )
-        await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
-
-        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
-        try:
-            msg = await interaction.original_response()
-            await msg.delete()
-        except discord.NotFound:
-            pass
-    except Exception as e:
-        print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
-
 class AnonymousMessageModal(Modal, title="ส่งข้อความนิรนาม"):
     def __init__(self, user_id: int):
         super().__init__()
@@ -146,25 +123,18 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
             return
         await send_anon_message(interaction, self.user_id, message_body)
 
-class NameInputModal(Modal, title="ส่งข้อความลับถึงใครดีน้า~"):
-    name = TextInput(label="ชื่อเล่นของเพื่อนที่คุณอยากส่งถึง (พิมพ์บางส่วนก็ได้)", required=True)
 
-    async def on_submit(self, interaction: discord.Interaction):
-        input_name = self.search_input.value.lower()
-        matched = [m for m in interaction.guild.members if not m.bot and input_name in m.display_name.lower()]
+class UserSelect(View):
+    def __init__(self, matched_users):
+        super().__init__(timeout=None)
+        options = [discord.SelectOption(label=user.display_name, value=str(user.id)) for user in matched_users]
+        self.select = Select(placeholder="เลือกเพื่อนที่คุณอยากส่งข้อความลับถึง", options=options)
+        self.select.callback = self.select_callback
+        self.add_item(self.select)
 
-        if not matched:
-            await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
-            return
-
-        if len(matched) > 1:
-            await interaction.response.send_message(
-                f"⚠️ พบผู้ใช้หลายคนที่ชื่อคล้ายกัน: {', '.join(m.display_name for m in matched[:5])}...",
-                ephemeral=True
-            )
-            return
-
-        await interaction.response.send_modal(AnonymousMessageModal(user_id=matched[0].id))
+    async def select_callback(self, interaction: discord.Interaction):
+        selected_user_id = int(self.select.values[0])
+        await interaction.response.send_modal(AnonymousMessageModal(user_id=selected_user_id))
 
 
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความลับ")
