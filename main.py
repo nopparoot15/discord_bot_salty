@@ -1,4 +1,30 @@
 
+class UserSelect(discord.ui.View):
+    def __init__(self, members: list[discord.Member]):
+        super().__init__(timeout=60)
+        options = [
+            discord.SelectOption(
+                label=member.display_name,
+                value=str(member.id),
+                description=f"@{member.name}"
+            )
+            for member in members[:25]
+        ]
+        self.select = Select(
+            placeholder="เลือกผู้ใช้ที่คุณต้องการส่งถึง",
+            options=options,
+            min_values=1,
+            max_values=1
+        )
+        self.select.callback = self.select_callback
+        self.add_item(self.select)
+
+    async def select_callback(self, interaction: discord.Interaction):
+        selected_id = int(self.select.values[0])
+        await interaction.response.send_modal(AnonymousMessageModal(user_id=selected_id))
+
+
+
 class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก"):
     def __init__(self):
         super().__init__()
@@ -20,14 +46,11 @@ class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก
             await interaction.response.send_message("❌ ไม่พบผู้ใช้ที่ตรงกับชื่อที่ป้อน", ephemeral=True)
             return
 
-        if len(matched) > 1:
-            await interaction.response.send_message(
-                f"⚠️ พบหลายชื่อคล้ายกัน: {', '.join(m.display_name for m in matched[:5])}...",
-                ephemeral=True
-            )
-            return
-
-        await interaction.response.send_modal(AnonymousMessageModal(user_id=matched[0].id))
+        await interaction.response.send_message(
+            "🔽 โปรดเลือกผู้ใช้ที่คุณต้องการส่งถึง:",
+            view=UserSelect(matched),
+            ephemeral=True
+        )
 
 
 class SetupView(View):
