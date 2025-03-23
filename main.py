@@ -128,6 +128,8 @@ class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก
         await interaction.response.send_modal(AnonymousMessageModal(user_id=matched[0].id))
 
 
+
+
 @bot.tree.command(name="setup", description="ตั้งค่าระบบส่งข้อความลับ")
 async def setup(interaction: discord.Interaction):
     print(f"[DEBUG] /setup called by {interaction.user} ({interaction.user.id})")
