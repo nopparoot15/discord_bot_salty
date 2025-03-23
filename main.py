@@ -47,11 +47,13 @@ class SetupView(View):
 
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-ANNOUNCE_CHANNEL_ID = int(os.getenv("ANNOUNCE_CHANNEL_ID"))
+ANNOUNCE_CHANNEL_ID_STR = os.getenv("ANNOUNCE_CHANNEL_ID")
 
-if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
+if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID_STR or not ANNOUNCE_CHANNEL_ID_STR.isdigit():
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
+
+ANNOUNCE_CHANNEL_ID = int(ANNOUNCE_CHANNEL_ID_STR)
 
 LOG_LIMIT_PERIOD = timedelta(minutes=1)  # ระยะเวลาในการจำกัดการส่ง log
 LOG_LIMIT_COUNT = 5  # จำนวนครั้งสูงสุดในการส่ง log ในช่วงเวลาที่กำหนด
