@@ -105,6 +105,10 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         except Exception as e:
             print(f"❌ ลบ followup ไม่สำเร็จ: {e}")
 
+        # ลบข้อความทั้งหมดในช่อง
+        await interaction.channel.purge()
+        await interaction.channel.send("📩 ส่งข้อความลับเลย!", view=SetupView())
+
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
 
