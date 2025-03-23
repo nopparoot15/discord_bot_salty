@@ -64,24 +64,36 @@ class MyBot(commands.Bot):
     def __init__(self):
         super().__init__(command_prefix="!", intents=intents)
         self.log_queue = deque()
+        self._is_logging = False  # เพิ่ม flag กัน recursion
 
     async def setup_hook(self):
         await self.tree.sync()
 
     async def log_message(self, sender, recipient, message_body):
-        now = datetime.now(timezone.utc)
-        # ลบ log ที่เก่าเกินจาก queue
-        while self.log_queue and self.log_queue[0] < now - LOG_LIMIT_PERIOD:
-            self.log_queue.popleft()
-        # ตรวจสอบจำนวน log ในช่วงเวลาที่กำหนด
-        if len(self.log_queue) < LOG_LIMIT_COUNT:
-            webhook = discord.SyncWebhook.from_url(WEBHOOK_URL)
-            content = f"📨 {sender} ส่งข้อความถึง {recipient}: {message_body}"
-            webhook.send(content[:2000])  # ตัดข้อความให้มีความยาวไม่เกิน 2000 ตัวอักษร
-            self.log_queue.append(now)
-            print(f"[LOG] {content}")
-        else:
-            print("[LOG] การส่ง log ถูกจำกัดเนื่องจากมี log มากเกินไปในช่วงเวลาที่กำหนด")
+        # ⛔ ห้าม log ถ้าผู้ส่งหรือผู้รับคือชื่อ bot log เอง (กันลูป)
+        if sender == "พรี่โต_log" or recipient == "นรินาม-logs":
+            return
+
+        if self._is_logging:
+            return
+
+        self._is_logging = True
+        try:
+            now = datetime.now(timezone.utc)
+            # ลบ log ที่เก่าเกินจาก queue
+            while self.log_queue and self.log_queue[0] < now - LOG_LIMIT_PERIOD:
+                self.log_queue.popleft()
+            # ตรวจสอบจำนวน log ในช่วงเวลาที่กำหนด
+            if len(self.log_queue) < LOG_LIMIT_COUNT:
+                webhook = discord.SyncWebhook.from_url(WEBHOOK_URL)
+                content = f"📨 {sender} ส่งข้อความถึง {recipient}: {message_body}"
+                webhook.send(content[:2000])  # ตัดข้อความให้มีความยาวไม่เกิน 2000 ตัวอักษร
+                self.log_queue.append(now)
+                print(f"[LOG] {content}")
+            else:
+                print("[LOG] การส่ง log ถูกจำกัดเนื่องจากมี log มากเกินไปในช่วงเวลาที่กำหนด")
+        finally:
+            self._is_logging = False
 
 bot = MyBot()
 
