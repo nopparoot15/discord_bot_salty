@@ -54,7 +54,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         msg = await interaction.response.send_message("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=False)
 
         followup = await interaction.followup.send(
-            ff"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
+            f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
             ephemeral=False
         )
 
@@ -79,7 +79,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
         await interaction.response.send_message("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=False)
         await interaction.followup.send(
-            ff"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
+            f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
             ephemeral=True
         )
         await log_message(f"📩 ส่งถึง {user_id} โดย {interaction.user}: {message_body}")
