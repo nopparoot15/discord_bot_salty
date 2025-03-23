@@ -113,13 +113,38 @@ async def _send_webhook(content):
         await interaction.response.send_message("✅ ข้อความถูกส่งเรียบร้อย!", ephemeral=True)
         await log_message(f"📩 ข้อความถูกส่งไปยังห้องประกาศโดย {interaction.user} ({interaction.user.id}): {self.message.value}")
 
+
+class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก"):
+    name = TextInput(label="ชื่อผู้ใช้ (หรือบางส่วน)", required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        input_name = self.name.value.lower()
+        matched = [m for m in interaction.guild.members if not m.bot and input_name in m.display_name.lower()]
+
+        if not matched:
+            await interaction.response.send_message("❌ ไม่พบผู้ใช้ที่ตรงกับชื่อที่ป้อน", ephemeral=True)
+            return
+
+        if len(matched) > 1:
+            await interaction.response.send_message(
+                f"⚠️ พบผู้ใช้หลายคนที่ชื่อคล้ายกัน: {', '.join(m.display_name for m in matched[:5])}...",
+                ephemeral=True
+            )
+            return
+
+        # ถ้าพบแค่คนเดียว → เปิด modal ส่งข้อความ
+        await interaction.response.send_modal(AnonymousMessageModal(user_id=matched[0].id))
+
+
 class SetupView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
+    
     @discord.ui.button(label="📩 เปิดเมนูส่งข้อความ", style=discord.ButtonStyle.primary)
     async def open_modal(self, interaction: discord.Interaction, button: Button):
-        members = interaction.guild.members
+        await interaction.response.send_modal(NameInputModal())
+
         view = PaginatedMemberDropdown(members)
         await interaction.response.send_message("👤 เลือกผู้รับที่ต้องการส่งข้อความถึง:", view=view, ephemeral=True)
 
