@@ -68,9 +68,8 @@ class MyBot(commands.Bot):
 bot = MyBot()
 
 async def log_message(content):
-    async with aiohttp.ClientSession() as session:
-        webhook = discord.Webhook.from_url(WEBHOOK_URL, adapter=discord.AsyncWebhookAdapter(session))
-        await webhook.send(content)
+    webhook = discord.SyncWebhook.from_url(WEBHOOK_URL)
+    webhook.send(content)
     print(f"[LOG] {content}")
 
 async def send_anon_message(interaction, user_id: int, message_body: str):
