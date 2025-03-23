@@ -28,15 +28,16 @@ class NameInputModal(Modal):
             await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
             return
 
-        response_message = await interaction.response.send_message(
+        await interaction.response.send_message(
             "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
-            view=UserSelect(matched),
-            ephemeral=True
-        )
+            ephemeral=True)
+        response_message = await interaction.followup.send(
+            "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
+            view=UserSelect(matched), ephemeral=True)
 
         # แก้ไขข้อความให้ว่างหลังจากเวลาที่กำหนด
         await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
-        await response_message.edit(content=' ', components=[], embeds=[])
+        await response_message.edit(content=' ', embed=None, view=None)
 
 
 class SetupView(View):
@@ -79,7 +80,7 @@ async def log_message(content):
         await log_channel.send(content)
     except Exception as e:
         print(f"❌ ไม่สามารถส่ง log เข้าแชแนลได้: {e}")
-    asyncio.create_task(_send_webhook(content))
+    
 
     async with aiohttp.ClientSession() as session:
         async with session.post(WEBHOOK_URL, json={"content": content}) as response:
@@ -104,7 +105,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
 
         # แก้ไขข้อความ follow-up ให้เป็นว่างหลังจากเวลาที่กำหนด
-        await followup.edit(content=' ', components=[], embeds=[])
+        await followup.edit(content=' ', embed=None, view=None)
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดในการส่งข้อความ: {e}")
@@ -125,7 +126,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
         await send_anon_message(interaction, self.user_id, message_body)
         
         # แก้ไขข้อความ "🔍 เจอชื่อคล้ายกันหลายคนเลย~" ให้เป็นว่างหลังจากกดปุ่มส่งข้อความ
-        await interaction.message.edit(content=' ', components=[], embeds=[])
+        await interaction.message.edit(content=' ', embed=None, view=None)
 
 
 class UserSelect(View):
