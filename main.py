@@ -22,7 +22,7 @@ class NameInputModal(Modal):
     if not message_body:
         await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
         return
-
+    pass
     await send_anon_message(interaction, self.user_id, message_body)
 
     # พยายามลบข้อความต้นทางแบบปลอดภัย
@@ -135,7 +135,7 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
     if not message_body:
         await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
         return
-
+    pass
     await send_anon_message(interaction, self.user_id, message_body)
 
     # พยายามลบข้อความต้นทางแบบปลอดภัย
