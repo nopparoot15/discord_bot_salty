@@ -1,32 +1,33 @@
-import os
-import sys
-import time
-import asyncio
-import aiohttp
-import discord
-from discord.ext import commands
-from discord import app_commands
-from discord.ui import View, Button, Modal, TextInput, Select
-from math import ceil
 
-class AnonymousMessageModal(Modal):
-    def __init__(self, user_id: int):
-        super().__init__(title="ส่งข้อความลับ")
-        self.user_id = user_id
-        self.body = TextInput(
-            label="ข้อความ",
-            style=discord.TextStyle.paragraph,
-            required=True,
-            max_length=2000
+class NameInputModal(Modal, title="พิมพ์ชื่อสมาชิก"):
+    def __init__(self):
+        super().__init__()
+        self.search_input = TextInput(
+            label="ชื่อผู้ใช้ (หรือบางส่วน)",
+            style=discord.TextStyle.short,
+            required=True
         )
-        self.add_item(self.body)
+        self.add_item(self.search_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        message_body = self.body.value.strip()
-        if not message_body:
-            await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+        input_name = self.search_input.value.lower()
+        matched = [
+            m for m in interaction.guild.members
+            if not m.bot and input_name in m.display_name.lower()
+        ]
+
+        if not matched:
+            await interaction.response.send_message("❌ ไม่พบผู้ใช้ที่ตรงกับชื่อที่ป้อน", ephemeral=True)
             return
-        await send_anon_message(interaction, self.user_id, message_body)
+
+        if len(matched) > 1:
+            await interaction.response.send_message(
+                f"⚠️ พบหลายชื่อคล้ายกัน: {', '.join(m.display_name for m in matched[:5])}...",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.send_modal(AnonymousMessageModal(user_id=matched[0].id))
 
 
 class SetupView(View):
