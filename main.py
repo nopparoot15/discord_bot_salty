@@ -28,14 +28,30 @@ class NameInputModal(Modal):
         ]
 
         if not matched:
-            await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
+            response_message = await interaction.response.send_message("❌ หาไม่เจอเลย~ ลองพิมพ์ใหม่อีกทีน้า", ephemeral=True)
+            await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+            try:
+                await response_message.delete()
+            except discord.NotFound:
+                print("⚠️ ข้อความถูกลบไปแล้ว")
+            except Exception as e:
+                print(f"❌ ลบข้อความไม่สำเร็จ: {e}")
             return
 
-        await interaction.response.send_message(
+        response_message = await interaction.response.send_message(
             "🔍 เจอชื่อคล้ายกันหลายคนเลย~ เลือกคนที่ใช่ด้านล่างนี้นะ!",
             view=UserSelect(matched),
             ephemeral=True
         )
+
+        await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+
+        try:
+            await response_message.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความถูกลบไปแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความไม่สำเร็จ: {e}")
 
 
 class SetupView(View):
@@ -51,7 +67,7 @@ TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 ANNOUNCE_CHANNEL_ID = os.getenv("ANNOUNCE_CHANNEL_ID")
 
-if not TOKEN or not WEBHOOK_URL or not ANNOUNCE_CHANNEL_ID:
+if not TOKEN or not WEBHOOK_URL หรือ ANNOUNCE_CHANNEL_ID:
     print("❌ โปรดตั้งค่า environment variables (TOKEN, WEBHOOK_URL, ANNOUNCE_CHANNEL_ID)")
     sys.exit(1)
 
@@ -88,7 +104,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         content = f"{mention_user}\n{message_body}"
 
         await announce_channel.send(content, allowed_mentions=discord.AllowedMentions(users=True))
-        await interaction.response.send_message("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
+        response_message = await interaction.response.send_message("✅ พรี่โตส่งข้อความให้เรียบร้อยแล้วนะ!", ephemeral=True)
 
         followup = await interaction.followup.send(
             f"🕓 ข้อความจะหายไปใน {AUTODELETE_CONFIRM_AFTER} วินาที เพื่อความเป็นส่วนตัวนะ!",
@@ -100,6 +116,7 @@ async def send_anon_message(interaction, user_id: int, message_body: str):
         await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
 
         try:
+            await response_message.delete()
             await followup.delete()
         except discord.NotFound:
             print("⚠️ ข้อความ follow-up ถูกลบไปแล้ว")
@@ -120,9 +137,24 @@ class AnonymousMessageModal(Modal, title="ส่งข้อความนิ�
     async def on_submit(self, interaction: discord.Interaction):
         message_body = self.body.value.strip()
         if not message_body:
-            await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+            response_message = await interaction.response.send_message("❌ กรุณาใส่ข้อความ", ephemeral=True)
+            await asyncio.sleep(AUTODELETE_CONFIRM_AFTER)
+            try:
+                await response_message.delete()
+            except discord.NotFound:
+                print("⚠️ ข้อความถูกลบไปแล้ว")
+            except Exception as e:
+                print(f"❌ ลบข้อความไม่สำเร็จ: {e}")
             return
         await send_anon_message(interaction, self.user_id, message_body)
+        
+        # ลบข้อความ "🔍 เจอชื่อคล้ายกันหลายคนเลย~" หลังจากกดปุ่มส่งข้อความ
+        try:
+            await interaction.message.delete()
+        except discord.NotFound:
+            print("⚠️ ข้อความถูกลบไปแล้ว")
+        except Exception as e:
+            print(f"❌ ลบข้อความไม่สำเร็จ: {e}")
 
 
 class UserSelect(View):
